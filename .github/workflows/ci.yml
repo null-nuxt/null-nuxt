@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # versão do pnpm vem do campo packageManager do package.json
+      # the pnpm version comes from the packageManager field in package.json
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
@@ -24,10 +24,15 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      # o script `prepare` da raiz roda junto e gera o .nuxt dos playgrounds,
-      # que typecheck e teste precisam pra resolver #imports
-      - name: Instalar dependências
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Generates the playgrounds' .nuxt, which typecheck and tests need in order
+      # to resolve #imports. It is a separate command rather than an automatic
+      # `prepare` because `prepare` also runs when this repository is installed
+      # as a git dependency, where it collides with the package build.
+      - name: Bootstrap
+        run: pnpm bootstrap
 
       - name: Lint
         run: pnpm lint
@@ -35,7 +40,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Testes
+      - name: Tests
         run: pnpm test
 
       - name: Build
