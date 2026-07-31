@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "description": "Tracking de interações para Nuxt: identidade, atribuição, page-view e diretiva — com wire format e identidade plugáveis.",
   "license": "MIT",
+  "homepage": "https://github.com/null-nuxt/null-nuxt/tree/main/packages/tracking#readme",
+  "keywords": [
+    "nuxt",
+    "nuxt-module",
+    "vue",
+    "analytics",
+    "tracking",
+    "events",
+    "attribution",
+    "user-journey"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/null-nuxt/null-nuxt.git",

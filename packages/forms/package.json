@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "description": "Formulário declarado em contextos — campos, schema e regras — consumido por composables, no estilo defineStore.",
   "license": "MIT",
+  "homepage": "https://github.com/null-nuxt/null-nuxt/tree/main/packages/forms#readme",
+  "keywords": [
+    "nuxt",
+    "nuxt-module",
+    "vue",
+    "forms",
+    "validation",
+    "standard-schema",
+    "zod",
+    "valibot",
+    "yup"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/null-nuxt/null-nuxt.git",
