@@ -4,9 +4,9 @@
   - changed-files:
       - any-glob-to-any-file: 'packages/tracking/**'
 
-'pkg: forms':
+'pkg: form-domain':
   - changed-files:
-      - any-glob-to-any-file: 'packages/forms/**'
+      - any-glob-to-any-file: 'packages/form-domain/**'
 
 'repo tooling':
   - changed-files:

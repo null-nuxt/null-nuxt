@@ -46,7 +46,7 @@ const findDomainFiles = (dir: string): string[] => {
  */
 const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
   meta: {
-    name: '@null-nuxt/forms',
+    name: '@null-nuxt/form-domain',
     configKey: 'forms',
     compatibility: { nuxt: '>=3.13.0' },
   },

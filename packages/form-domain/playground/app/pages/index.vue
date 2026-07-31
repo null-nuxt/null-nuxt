@@ -6,7 +6,7 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
 
 <template>
   <main style="font-family: system-ui; padding: 2rem; display: grid; gap: 1rem; max-width: 46rem">
-    <h1>@null-nuxt/forms — domínio</h1>
+    <h1>@null-nuxt/form-domain</h1>
     <p style="color:#52525b; font-size:.9rem">
       Este domínio está separado em <code>fields</code>, <code>rules</code>,
       <code>schema</code> e <code>meta</code> — quatro arquivos, um contexto

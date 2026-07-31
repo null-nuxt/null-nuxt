@@ -10,7 +10,7 @@ body:
       description: Which package is this about?
       options:
         - '@null-nuxt/tracking'
-        - '@null-nuxt/forms'
+        - '@null-nuxt/form-domain'
         - Repository tooling (CI, lint, build)
     validations:
       required: true
@@ -20,7 +20,7 @@ body:
     attributes:
       label: Versions
       description: Package version, Nuxt version, package manager
-      placeholder: '@null-nuxt/forms 0.1.0 · nuxt 4.4.8 · pnpm 11.5.2'
+      placeholder: '@null-nuxt/form-domain 0.1.0 · nuxt 4.4.8 · pnpm 11.5.2'
     validations:
       required: true
 

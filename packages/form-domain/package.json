@@ -1,9 +1,9 @@
 {
-  "name": "@null-nuxt/forms",
+  "name": "@null-nuxt/form-domain",
   "version": "0.1.0",
   "description": "Formulário declarado em contextos — campos, schema e regras — consumido por composables, no estilo defineStore.",
   "license": "MIT",
-  "homepage": "https://github.com/null-nuxt/null-nuxt/tree/main/packages/forms#readme",
+  "homepage": "https://github.com/null-nuxt/null-nuxt/tree/main/packages/form-domain#readme",
   "keywords": [
     "nuxt",
     "nuxt-module",
@@ -18,7 +18,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/null-nuxt/null-nuxt.git",
-    "directory": "packages/forms"
+    "directory": "packages/form-domain"
   },
   "publishConfig": {
     "access": "restricted"

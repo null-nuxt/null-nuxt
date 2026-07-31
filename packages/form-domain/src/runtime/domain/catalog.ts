@@ -23,12 +23,12 @@ export function useFormDomain<S extends FormDomainSlug>(slug: S) {
    * `import type` would be erased, the catalog would be empty at runtime.
    */
   if (domains.length === 0) {
-    throw new Error('[@null-nuxt/forms] no form domains found. Are they under <srcDir>/forms?')
+    throw new Error('[@null-nuxt/form-domain] no form domains found. Are they under <srcDir>/forms?')
   }
 
   const factory = registeredDomains().get(slug)
   if (!factory) {
-    throw new Error(`[@null-nuxt/forms] form domain "${slug}" not found. Is it under <srcDir>/forms?`)
+    throw new Error(`[@null-nuxt/form-domain] form domain "${slug}" not found. Is it under <srcDir>/forms?`)
   }
 
   return factory() as Extract<AnyFormDomain, { id: S }>

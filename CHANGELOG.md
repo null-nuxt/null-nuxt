@@ -50,7 +50,7 @@ it is listed under `Added` rather than split across change types.
   `runtimeConfig.public`, keeping it out of the SSR payload.
 - **Consent gate**: nothing is sent while consent is false.
 
-### `@null-nuxt/forms` — Added
+### `@null-nuxt/form-domain` — Added
 
 - **`createFormDomain` builder** accumulating types across `withFields`,
   `withComputed`, `withRules`, `withSchema` and `withMeta`. The builder exists

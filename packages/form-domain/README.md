@@ -1,4 +1,4 @@
-# @null-nuxt/forms
+# @null-nuxt/form-domain
 
 A form declared in **separate layers** — fields, business rules, schema and
 metadata — consumed through composables, in the style of `defineStore`.
@@ -357,7 +357,7 @@ instantiates all of them — the inherent cost of listing.
 ## Installation
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#path:/packages/forms"
+pnpm add "github:null-nuxt/null-nuxt#path:/packages/form-domain"
 ```
 
 Not published to npm — installed straight from the repository. The consuming
@@ -366,12 +366,12 @@ project must allow the package to build on install:
 ```yaml
 # pnpm-workspace.yaml
 allowBuilds:
-  "@null-nuxt/forms": true
+  "@null-nuxt/form-domain": true
 ```
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['@null-nuxt/forms'],
+  modules: ['@null-nuxt/form-domain'],
 })
 ```
 

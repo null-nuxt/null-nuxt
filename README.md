@@ -6,7 +6,7 @@ tracking and form definition.
 | package | what it solves |
 |---|---|
 | [`@null-nuxt/tracking`](packages/tracking) | anonymous identity, attribution, page views, a click directive and delivery — with a pluggable wire format and identity strategy |
-| [`@null-nuxt/forms`](packages/forms) | a form declared in layers (fields, rules, schema, meta) and consumed through composables, in the style of `defineStore` |
+| [`@null-nuxt/form-domain`](packages/form-domain) | a form declared in layers (fields, rules, schema, meta) and consumed through composables, in the style of `defineStore` |
 
 ## Why they exist
 
@@ -48,14 +48,14 @@ These packages are not published to npm. Install them straight from this
 repository — pnpm supports pointing at a subdirectory:
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#path:/packages/forms"
+pnpm add "github:null-nuxt/null-nuxt#path:/packages/form-domain"
 pnpm add "github:null-nuxt/null-nuxt#path:/packages/tracking"
 ```
 
 Pin a tag for reproducible installs:
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#v0.1.0&path:/packages/forms"
+pnpm add "github:null-nuxt/null-nuxt#v0.1.0&path:/packages/form-domain"
 ```
 
 A git-hosted package is built on install, and pnpm 10+ requires the consuming
@@ -64,7 +64,7 @@ project to allow that explicitly:
 ```yaml
 # pnpm-workspace.yaml in the consuming project
 allowBuilds:
-  "@null-nuxt/forms": true
+  "@null-nuxt/form-domain": true
 ```
 
 Without that entry the install fails with `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`.
