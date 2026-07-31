@@ -7,6 +7,29 @@ Schema-library agnostic: anything implementing
 [Standard Schema](https://standardschema.dev) works — Zod, Valibot, ArkType,
 yup 1.7+.
 
+## Installation
+
+```bash
+pnpm add "github:null-nuxt/null-nuxt#path:/packages/form-domain"
+```
+
+Not published to npm — installed straight from the repository. The consuming
+project must allow the package to build on install:
+
+```yaml
+# pnpm-workspace.yaml
+allowBuilds:
+  "@null-nuxt/form-domain": true
+```
+
+```ts
+export default defineNuxtConfig({
+  modules: ['@null-nuxt/form-domain'],
+})
+```
+
+Bring your own schema library — anything implementing Standard Schema.
+
 ## Two terminals: `use()` and `build()`
 
 A simple form, declared inside the component itself:
@@ -353,29 +376,6 @@ registered at `build()` time without creating reactive state. `useFormDomains`
 instantiates all of them — the inherent cost of listing.
 
 `x.ts` and `x/index.ts` are the same domain; if both exist, the directory wins.
-
-## Installation
-
-```bash
-pnpm add "github:null-nuxt/null-nuxt#path:/packages/form-domain"
-```
-
-Not published to npm — installed straight from the repository. The consuming
-project must allow the package to build on install:
-
-```yaml
-# pnpm-workspace.yaml
-allowBuilds:
-  "@null-nuxt/form-domain": true
-```
-
-```ts
-export default defineNuxtConfig({
-  modules: ['@null-nuxt/form-domain'],
-})
-```
-
-Bring your own schema library — anything implementing Standard Schema.
 
 ## What the compiler guarantees
 
