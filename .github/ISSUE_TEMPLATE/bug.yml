@@ -1,0 +1,59 @@
+name: Bug report
+description: Something behaves differently from what the README describes
+labels: ['bug']
+
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package is this about?
+      options:
+        - '@null-nuxt/tracking'
+        - '@null-nuxt/forms'
+        - Repository tooling (CI, lint, build)
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Package version, Nuxt version, package manager
+      placeholder: '@null-nuxt/forms 0.1.0 · nuxt 4.4.8 · pnpm 11.5.2'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: Quote the README section if it describes different behaviour.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Include the error message in full, not a paraphrase.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: >
+        The smallest form domain or tracking definition that shows the problem.
+        A link to a repository beats a description.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I ran `pnpm bootstrap` before `pnpm test` / `pnpm typecheck`
+        - label: This is not a question about which layer to put something in — those belong in Discussions

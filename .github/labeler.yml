@@ -1,0 +1,22 @@
+# Auto-labels a pull request by the paths it touches. In a monorepo this is what
+# keeps "which package is this about?" answerable without reading the diff.
+'pkg: tracking':
+  - changed-files:
+      - any-glob-to-any-file: 'packages/tracking/**'
+
+'pkg: forms':
+  - changed-files:
+      - any-glob-to-any-file: 'packages/forms/**'
+
+'repo tooling':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - 'eslint.config.mjs'
+          - 'package.json'
+          - 'pnpm-workspace.yaml'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
