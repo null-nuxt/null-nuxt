@@ -1,0 +1,53 @@
+{
+  "name": "@null-nuxt/tracking",
+  "version": "0.1.0",
+  "description": "Tracking de interações para Nuxt: identidade, atribuição, page-view e diretiva — com wire format e identidade plugáveis.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/null-nuxt/null-nuxt.git",
+    "directory": "packages/tracking"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "type": "module",
+  "main": "./dist/module.mjs",
+  "types": "./dist/types.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/types.d.mts",
+      "import": "./dist/module.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prepack": "nuxt-module-build build",
+    "dev": "nuxi dev playground",
+    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "typecheck:playground": "cd playground && vue-tsc --build --force",
+    "test": "vitest run",
+    "prepare": "nuxt-module-build build"
+  },
+  "dependencies": {
+    "@nuxt/kit": "^3.17.0 || ^4.0.0",
+    "@nuxt/schema": "^3.17.0 || ^4.0.0",
+    "defu": "^6.1.4",
+    "ufo": "^1.5.4"
+  },
+  "devDependencies": {
+    "@nuxt/module-builder": "^1.0.1",
+    "@types/node": "^26.1.2",
+    "nuxt": "^4.4.8",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10",
+    "vue": "^3.5.31",
+    "vue-tsc": "^3.3.8"
+  },
+  "peerDependencies": {
+    "nuxt": ">=3.13.0"
+  }
+}
