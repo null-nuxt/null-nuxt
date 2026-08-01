@@ -87,6 +87,15 @@ addRules(withChoice, {
 })
 
 /**
+ * The singular form gates it the same way. The same mistake must not compile
+ * through one and fail through the other — which it did until this was pinned.
+ */
+addRule(withChoice.city, { deriveOptions: () => [{ label: 'Recife', value: 'recife' }] })
+
+// @ts-expect-error `state` declared no options, so the singular form refuses too
+addRule(withChoice.state, { deriveOptions: () => [] })
+
+/**
  * The name differs from the declaration's `options` because the SHAPES differ:
  * an array there, a function here. Sharing the name would invite writing the
  * array form in a rule and finding out from a type error.

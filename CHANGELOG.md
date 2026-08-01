@@ -27,6 +27,10 @@ predates that and is kept only so existing pins keep resolving.
   Breaking for a field that took its options only from a rule — add
   `options: []` to its declaration.
 
+- **`addRule` gates `deriveOptions` too.** The keyed form rejected it on a
+  field that declared no options while the singular form accepted it, so the
+  same mistake compiled or not depending on which was reached for.
+
 - **A rule derives a list with `deriveOptions`, not `options`.** The two shapes
   differ — an array in the declaration, a function returning one in the rule —
   and sharing the name invited writing the array form in a rule and learning
@@ -288,6 +292,10 @@ it is listed under `Added` rather than split across change types.
 
   Breaking for a field that took its options only from a rule — add
   `options: []` to its declaration.
+
+- **`addRule` gates `deriveOptions` too.** The keyed form rejected it on a
+  field that declared no options while the singular form accepted it, so the
+  same mistake compiled or not depending on which was reached for.
 
 - **A rule derives a list with `deriveOptions`, not `options`.** The two shapes
   differ — an array in the declaration, a function returning one in the rule —

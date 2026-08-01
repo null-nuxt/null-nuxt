@@ -21,13 +21,21 @@ const warnIfTaken = (slot: 'rule' | 'schema', key: string, taken: boolean) => {
  * Behaviour for one field. The field is the argument, so nothing has to know
  * which form is "current" — which is what keeps this callable from anywhere,
  * including another file, without the hazards an ambient registry brings.
+ *
+ * `deriveOptions` is gated the same way the keyed form gates it: the field has
+ * to have declared `options`. Reading it off the target's declaration rather
+ * than off a fields object is the only difference — the same mistake must not
+ * compile through one form and fail through the other.
  */
-export function addRule<TValue, TValues>(
-  target: FieldObj<TValue, TValues>,
-  rule: FieldRule<TValue, TValues>,
+export function addRule<TValue, TValues, TDeclared>(
+  target: FieldObj<TValue, TValues, TDeclared>,
+  rule: Omit<FieldRule<TValue, TValues>, 'deriveOptions'>
+    & ('options' extends keyof NonNullable<TDeclared>
+      ? { deriveOptions?: () => ReadonlyArray<FieldOption<TValue>> }
+      : { deriveOptions?: never }),
 ): void {
   warnIfTaken('rule', target.key, target.rule !== undefined)
-  target.rule = rule
+  target.rule = rule as FieldRule<TValue, TValues>
 }
 
 /**
