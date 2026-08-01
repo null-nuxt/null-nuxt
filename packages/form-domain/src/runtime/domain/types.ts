@@ -147,7 +147,17 @@ export interface FieldBindings<TValue> {
   name: string
   label: string
   modelValue: TValue
-  'onUpdate:modelValue': (value: TValue) => void
+  /**
+   * The parameter is widened with `| undefined` deliberately. A component
+   * declaring `defineModel<string>()` emits `string | undefined`, and under
+   * `strictFunctionTypes` a handler taking only `string` is NOT assignable to
+   * that — `v-bind="register('x')"` would fail to compile on the single most
+   * common way to write an input.
+   *
+   * The widening costs nothing in the other direction: a component that emits
+   * a non-optional value still accepts a handler that tolerates `undefined`.
+   */
+  'onUpdate:modelValue': (value: TValue | undefined) => void
   options?: ReadonlyArray<FieldOption<TValue>>
   placeholder?: string
   mask?: string

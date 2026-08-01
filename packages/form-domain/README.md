@@ -69,6 +69,19 @@ It provides `name`, `label`, `modelValue` and the `update:modelValue` handler,
 plus `options`, `placeholder` and `mask` **only when the field has them** — a
 key the component doesn't declare would end up as a stray DOM attribute.
 
+The handler accepts `TValue | undefined`, not just `TValue`. That's not
+sloppiness — a component written the ordinary way emits the wider type:
+
+```ts
+const model = defineModel<string>()  // emits string | undefined
+```
+
+Under `strictFunctionTypes` a handler taking only `string` is **not** assignable
+to that, and `v-bind="form.register('name')"` would fail to compile on the most
+common way to write an input. Whatever the component emits is what the field
+stores, `undefined` included — declare `field({ value: '' as string | undefined })`
+if your component really clears the model that way.
+
 Each field also knows its own key (`form.data.email.key === 'email'`), so the
 template doesn't repeat the field name next to the field itself.
 

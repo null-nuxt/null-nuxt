@@ -270,6 +270,13 @@ function createInstance(definition: Definition) {
           name: key,
           label: fieldData.label,
           modelValue: fieldData.value,
+          /**
+           * Whatever the component emits is what the field stores, `undefined`
+           * included — a component written with `defineModel<string>()` emits
+           * `string | undefined`, and the binding has to accept that to be
+           * assignable at all. Coercing it back to the initial value would be
+           * wrong for any field whose initial value isn't the empty one.
+           */
           'onUpdate:modelValue': (next: unknown) => {
             fieldData.value = next
           },

@@ -7,7 +7,14 @@ independently.
 
 ## [Unreleased]
 
-Nothing yet.
+### `@null-nuxt/form-domain` — Fixed
+
+- **`register()` bindings are assignable to an ordinary input component.** The
+  `update:modelValue` handler now accepts `TValue | undefined`. A component
+  declaring `defineModel<string>()` emits `string | undefined`, and under
+  `strictFunctionTypes` a handler taking only `string` is not assignable to it —
+  `v-bind="form.register('name')"` failed to compile on the most common way to
+  write an input.
 
 ## [0.1.0] — 2026-07-31
 

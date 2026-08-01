@@ -600,6 +600,20 @@ describe('register: props prontas pro input', () => {
     expect(form.register('perfil').options?.map(o => o.value)).toEqual(['adv'])
     expect(form.register('cpf').mask).toBe('cpf')
   })
+
+  /**
+   * O handler aceita `undefined` porque um componente com `defineModel<string>()`
+   * emite `string | undefined` — sem isso o `v-bind` nem compila. O que chega é
+   * o que o campo passa a guardar: quem espera receber `undefined` de verdade
+   * declara o campo como `value: '' as string | undefined`.
+   */
+  it('escreve o que o componente emitir, inclusive undefined', () => {
+    form.register('nome')['onUpdate:modelValue'](undefined)
+    expect(form.values.value.nome).toBeUndefined()
+
+    form.register('nome')['onUpdate:modelValue']('Ana')
+    expect(form.values.value.nome).toBe('Ana')
+  })
 })
 
 describe('key do campo', () => {
