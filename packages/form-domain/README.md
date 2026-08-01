@@ -10,8 +10,11 @@ yup 1.7+.
 ## Installation
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#path:/packages/form-domain"
+pnpm add "github:null-nuxt/null-nuxt#form-domain@0.2.0&path:/packages/form-domain"
 ```
+
+Each package is tagged on its own, since they are versioned and pinned
+separately. Dropping the tag resolves to whatever `main` points at.
 
 Not published to npm — installed straight from the repository. The consuming
 project must allow the package to build on install:

@@ -52,11 +52,17 @@ pnpm add "github:null-nuxt/null-nuxt#path:/packages/form-domain"
 pnpm add "github:null-nuxt/null-nuxt#path:/packages/tracking"
 ```
 
-Pin a tag for reproducible installs:
+Pin a tag for reproducible installs. Each package is tagged on its own, since
+they are versioned and pinned separately:
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#v0.1.0&path:/packages/form-domain"
+pnpm add "github:null-nuxt/null-nuxt#form-domain@0.2.0&path:/packages/form-domain"
+pnpm add "github:null-nuxt/null-nuxt#tracking@0.1.0&path:/packages/tracking"
 ```
+
+Without a tag the ref resolves to whatever `main` points at, and the commit is
+frozen into your lockfile — updating then means re-running the command with a
+newer tag.
 
 A git-hosted package is built on install, and pnpm 10+ requires the consuming
 project to allow that explicitly:
@@ -68,6 +74,10 @@ allowBuilds:
 ```
 
 Without that entry the install fails with `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`.
+
+Approving a git package **by name** only works on pnpm 11.15 and up; before
+that the key had to carry the resolved commit hash, which changes on every
+update. On an older pnpm, upgrade it or expect to re-approve after each bump.
 
 ## Development
 

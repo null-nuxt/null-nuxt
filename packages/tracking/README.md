@@ -11,8 +11,11 @@ more variation than the last.
 ## Installation
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#path:/packages/tracking"
+pnpm add "github:null-nuxt/null-nuxt#tracking@0.1.0&path:/packages/tracking"
 ```
+
+Each package is tagged on its own, since they are versioned and pinned
+separately. Dropping the tag resolves to whatever `main` points at.
 
 Not published to npm — installed straight from the repository. The consuming
 project must allow the package to build on install:

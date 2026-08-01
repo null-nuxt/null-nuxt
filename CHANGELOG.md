@@ -5,9 +5,21 @@ All notable changes to this project are documented here. The format follows
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 independently.
 
+Each package is tagged on its own — `form-domain@0.2.0`, `tracking@0.1.0` —
+because they are installed and pinned separately. The repo-wide `v0.1.0` tag
+predates that and is kept only so existing pins keep resolving.
+
 ## [Unreleased]
 
-### `@null-nuxt/form-domain` — Fixed
+Nothing yet.
+
+## `@null-nuxt/form-domain` 0.2.0 — 2026-08-01
+
+Breaking, and worth migrating in one go: three layer names changed and
+`storeLabelIn` is gone. Everything here is type-level, so the compiler points
+at every call site that needs updating.
+
+### Fixed
 
 - **`register()` bindings are assignable to an ordinary input component.** The
   `update:modelValue` handler now accepts `TValue | undefined`. A component
@@ -21,7 +33,7 @@ independently.
   `shape` and it did not typecheck. A key is optional only when a `canShow` rule
   can hide it: an all-optional shape is what those functions reject.
 
-### `@null-nuxt/form-domain` — Added
+### Added
 
 - **`withMetadata`**, the catalog entry: title, route, category, keywords,
   ordering, which component renders the form. Static, and attached to the
@@ -43,7 +55,7 @@ independently.
   hand outside a `computed` freezes the schema at its first value, so a field
   `canShow` hides later stays required.
 
-### `@null-nuxt/form-domain` — Changed
+### Changed
 
 - **`register()` is typed per field.** `options`, `placeholder` and `mask` are
   absent from the bindings unless the field (or, for options, a rule) declares
@@ -63,7 +75,7 @@ independently.
   and `outcome` describes the contents better: price, sku and the cart line are
   what results from filling the form in, not metadata about the domain.
 
-### `@null-nuxt/form-domain` — Removed
+### Removed
 
 - **`storeLabelIn`.** Getting an option's text into the payload took three
   declarations — a phantom `field()` nobody fills, the mirror rule, and a
@@ -149,5 +161,5 @@ it is listed under `Added` rather than split across change types.
   helpers, which extract the context from a partial builder and avoid a
   circular import.
 
-[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.2.0...HEAD
 [0.1.0]: https://github.com/null-nuxt/null-nuxt/releases/tag/v0.1.0
