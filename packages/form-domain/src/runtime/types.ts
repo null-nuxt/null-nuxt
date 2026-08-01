@@ -61,8 +61,17 @@ export type FormValues<F extends FieldsDef> = { [K in keyof F]: F[K]['value'] }
  * that's what makes `shape({ missingField: string() })` fail to compile.
  * Constraining with `Partial<Record<...>>` alone wouldn't be enough: in an
  * `extends` check, extra properties pass.
+ *
+ * The `string extends Allowed` branch guards the failure mode this check has on
+ * its own: when the fields aren't known yet, `Allowed` is the whole `string`
+ * type, `K extends Allowed` is true for every key, and the check silently
+ * accepts anything. Silently is the problem — it looks like it's working.
+ *
+ * That happens whenever a layer is declared before `withFields` has narrowed
+ * the fields, so the guard turns the quiet no-op into a compile error naming
+ * the cause.
  */
-export type OnlyKnownKeys<T, Allowed extends string> = {
-  [K in keyof T]: K extends Allowed ? T[K] : never
-}
+export type OnlyKnownKeys<T, Allowed extends string> = string extends Allowed
+  ? { __declareFieldsFirst: 'the field keys are not known here, so this check would silently accept anything — call withFields before this layer' }
+  : { [K in keyof T]: K extends Allowed ? T[K] : never }
 

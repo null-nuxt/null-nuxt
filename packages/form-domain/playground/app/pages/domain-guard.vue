@@ -35,6 +35,26 @@ const useDomain = createFormDomain('domain-guard')
   .build()
 
 /**
+ * Camada declarada ANTES de `withFields` não tem como checar chave: sem campos
+ * concretos, `keyof F` é `string` e o `OnlyKnownKeys` aceitaria qualquer coisa.
+ *
+ * O perigoso não era aceitar — era aceitar CALADO, parecendo que checou. A
+ * guarda transforma isso em erro que nomeia a causa. Se ela regredir, estes
+ * dois `@ts-expect-error` ficam sem uso e o typecheck falha.
+ */
+createFormDomain('domain-guard-ordem-rules')
+  // @ts-expect-error rules antes de fields: não há chave que possa ser checada
+  .withRules({ campoQueNaoExiste: { canShow: () => true } })
+  .withFields({ cpf: field({ label: 'CPF', value: '' }) })
+  .build()
+
+createFormDomain('domain-guard-ordem-schema')
+  // @ts-expect-error schema antes de fields, mesmo motivo
+  .withSchema({ campoQueNaoExiste: string().required() })
+  .withFields({ cpf: field({ label: 'CPF', value: '' }) })
+  .build()
+
+/**
  * O payload é uma PROJEÇÃO: o texto da escolha entra nele sem campo fantasma,
  * e o contexto oferece `values` e `visible` para o projeto escolher qual dos
  * dois vai pro backend.

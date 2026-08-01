@@ -530,11 +530,23 @@ values from all of them at once.
 | `useFormDomain('unknown-slug')` | **compile time** |
 | `register()` reading an extra the field never declared | **compile time** |
 | an option whose value doesn't match the field's | **compile time** |
+| a layer declared before `withFields` | **compile time** |
 | `onChange` patching a field that doesn't exist | ignored at runtime |
 
 The last one is a known limitation — the generic that validates `rules` keys
 loosens the patch type. It's covered by a test rather than by contorting the
 types to the point where the error message becomes unreadable.
+
+The order rule is worth knowing for what it prevents. `withFields` is what
+gives the key check something to check against; declared before it, `keyof F`
+is the whole `string` type and every key passes. The failure was silent — it
+looked like the check ran — so it now names the cause instead:
+
+```ts
+createFormDomain('x')
+  .withRules({ anything: { canShow: () => true } })  // ✗ declare withFields first
+  .withFields({ /* ... */ })
+```
 
 ## API
 
