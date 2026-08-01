@@ -1,7 +1,7 @@
 # @null-nuxt/form-domain
 
-A form declared in **separate layers** — fields, business rules, schema and
-metadata — consumed through composables, in the style of `defineStore`.
+A form declared as a **setup function** — fields, rules, validation and the
+payload — consumed through composables, in the style of `defineStore`.
 
 Schema-library agnostic: anything implementing
 [Standard Schema](https://standardschema.dev) works — Zod, Valibot, ArkType,
@@ -10,7 +10,7 @@ yup 1.7+.
 ## Installation
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#form-domain@0.2.1&path:/packages/form-domain"
+pnpm add "github:null-nuxt/null-nuxt#form-domain@0.3.0&path:/packages/form-domain"
 ```
 
 Each package is tagged on its own, since they are versioned and pinned
@@ -25,566 +25,361 @@ allowBuilds:
   "@null-nuxt/form-domain": true
 ```
 
+Approving a git package **by name** only works on pnpm 11.15 and up; before
+that the key had to carry the resolved commit hash, which changes on every
+update.
+
 ```ts
 export default defineNuxtConfig({
   modules: ['@null-nuxt/form-domain'],
 })
 ```
 
-Bring your own schema library — anything implementing Standard Schema.
+## A form inside a component
 
-## Two terminals: `use()` and `build()`
-
-A simple form, declared inside the component itself:
-
-```ts
-const form = createFormDomain('applicant-details')
-  .withFields({ name: field({ label: 'Full name', value: '' }) })
-  .use()          // local instance, right here
-```
-
-A shared domain, in a file under `<srcDir>/forms`:
-
-```ts
-export default createFormDomain('federal-court')
-  .withFields({ /* ... */ })
-  .build()        // composable; every caller gets the SAME instance
-```
-
-| | `use()` | `build()` |
-|---|---|---|
-| returns | the instance | the composable |
-| state | local, one per call | shared by slug |
-| catalog | not registered | registered |
-| watchers | die with the component | live with the domain |
-
-The split exists for a practical reason: an inline definition usually closes
-over `props`. If the instance were shared by id, a second component would
-silently inherit the first one's props.
-
-### `register()` builds the input props
+There is no wrapper to write. `<script setup>` is already the scope, so the
+fields are consts, anything derived is a `computed`, and the form is assembled
+at the end:
 
 ```vue
-<MyInput v-bind="form.register('name')" />
-```
+<script setup lang="ts">
+import { object, string } from 'yup'
 
-It provides `name`, `label`, `modelValue` and the `update:modelValue` handler,
-plus `options`, `placeholder` and `mask` **only when the field has them** — a
-key the component doesn't declare would end up as a stray DOM attribute.
-
-"Only when the field has them" is a statement about the **type**, not just the
-runtime object. A field declared without options has no `options` key at all in
-its bindings, so reading it is a compile error rather than `undefined`:
-
-```ts
-.withFields({
-  username: field({ label: 'Username', value: '' }),
-  profile: field({ label: 'Profile', value: '', options: [/* ... */] }),
+const campos = fields({
+  name: { label: 'Full name', value: '' },
+  personType: {
+    label: 'Type',
+    value: '' as 'individual' | 'company' | '',
+    options: [
+      { label: 'Individual', value: 'individual' },
+      { label: 'Company', value: 'company' },
+    ],
+  },
+  ein: { label: 'Company number', value: '' },
 })
 
-form.register('profile').options   // ok
-form.register('username').options  // ✗ this field declares no options
+const isCompany = computed(() => campos.personType.value === 'company')
+
+addRule(campos.ein, { canShow: () => isCompany.value, clearWhenHidden: true })
+
+addSchemas(campos, {
+  name: string().required(),
+  personType: string().required(),
+  ein: string().required(),
+})
+
+const { register, canShow, values, composeSchema } = useForm(campos)
+const schema = composeSchema(object)
+</script>
+
+<template>
+  <MyInput v-bind="register('name')" />
+  <MySelect v-bind="register('personType')" />
+  <MyInput v-if="canShow.ein" v-bind="register('ein')" />
+</template>
 ```
 
-Derived options count as declaring them: a field whose `options` come from
-`rules` gets the key too.
+## A shared domain
 
-The handler accepts `TValue | undefined`, not just `TValue`. That's not
-sloppiness — a component written the ordinary way emits the wider type:
+A domain has no component to live in, so it gets a setup of its own. Put it
+under `<srcDir>/forms` and it is discovered automatically:
 
 ```ts
-const model = defineModel<string>()  // emits string | undefined
+// forms/federal-court/index.ts
+export const metadata = {
+  title: 'Criminal Record Certificate',
+  to: '/services/certificates/federal-court',
+  category: 'certificates',
+  order: 120,
+}
+
+export default defineFormDomain('federal-court', metadata, () => {
+  const campos = createFields()
+
+  documento(campos)   // one file per block
+  regiao(campos)
+
+  const isPF = computed(() => campos.tipoPessoa.value === 'PF')
+
+  return {
+    fields: campos,
+    isPF,
+    price: computed(() => isPF.value ? 59.9 : 89.9),
+  }
+})
+  .payload(ctx => ({
+    ...ctx.visible,
+    region_label: ctx.fields.regiao.selected?.label ?? '',
+    price: ctx.price.value,
+  }))
 ```
 
-Under `strictFunctionTypes` a handler taking only `string` is **not** assignable
-to that, and `v-bind="form.register('name')"` would fail to compile on the most
-common way to write an input. Whatever the component emits is what the field
-stores, `undefined` included — declare `field({ value: '' as string | undefined })`
-if your component really clears the model that way.
+`metadata` is optional: `defineFormDomain(id, setup)` works too.
 
-Each field also knows its own key (`form.data.email.key === 'email'`), so the
-template doesn't repeat the field name next to the field itself.
+The setup returns its fields under the reserved `fields` key. **Everything else
+it returns is exposed untouched** — nothing is classified, because the engine
+only needs to know which of them are the fields.
 
-### Submitting is not this module's job
+## Why a setup and not a builder
 
-There is deliberately no `onSubmit` or `onSchemaError` here. The module
-provides **schema and state**; running validation and submission belongs to
-your form library — vee-validate, FormKit, or your own wrapper. Owning the
-submit lifecycle would duplicate what those libraries already do and tie the
-module to one of them.
+This package used to be a `withFields().withFacts().withRules()` chain, and the
+chain existed for one reason: inside a single object literal TypeScript infers
+every property at once, so `rules` could not see the inferred type of `facts`.
 
-## Form domain
+A setup has no literal. Each line is a declaration and inference runs top to
+bottom, so the limitation is gone rather than worked around — and with it the
+eight type parameters, the `RulesOf`/`SchemaOf`/`OutcomeOf` helpers a consuming
+project had to import, and a whole class of ordering mistakes.
 
-When the form **is** a domain object (a certificate, an order) and carries more
-than fields — business rules, price, sku — use `createFormDomain`:
+## Registration takes its target
 
 ```ts
-createFormDomain('federal-court')
-  .withFields({ person_type: field<PersonType>({ label: 'Type', value: '' }), ssn: ... })
-  .withFacts(ctx => ({ isIndividual: ctx.values.person_type === 'individual' }))
-  .withRules({
-    ssn: { canShow: ctx => ctx.facts.isIndividual },
-    region: { options: ctx => ctx.facts.isIndividual ? REGIONS_A : REGIONS_B },
-    person_type: { onChange: (_value, ctx) => ctx.patch({ region: '' }) },
-  })
-  .withSchema(ctx => ctx.shape({ /* ... */ }))
-  .withOutcome(ctx => ({ sku: ctx.facts.isIndividual ? 'A' : 'B' }))
-  .withPayload(ctx => ({ ...ctx.visible, price: ctx.outcome.price }))
-  .build()
+addRule(campos.ein, { canShow: () => isCompany.value })
+addRules(campos, { ein: { canShow: () => isCompany.value } })
 ```
 
-### The layers
+The field is the argument, so nothing needs to know which form is "current".
+That is what keeps this callable from anywhere — including another file —
+without the hazards an ambient registry brings, and it is why the rules stay a
+separable layer: grouping the calls elsewhere is still a rules file.
 
-Each layer answers one question, and **no layer reads a layer below it** — the
-one rule that keeps them from blurring:
+The keyed form takes a **direct argument** rather than something returned. Both
+reject a field that doesn't exist, but from an arrow's return the error lands on
+the whole function instead of the offending key.
 
-| layer | question | needs an instance? |
-|---|---|---|
-| `metadata` | what is this domain, before anyone fills anything in? | **no** |
-| `fields` | what does the user fill? | — |
-| `facts` | what does the domain conclude? | yes |
-| `rules` | how does each field behave? | yes |
-| `schema` | what makes each field valid? | yes |
-| `outcome` | what does filling this in result in? | yes |
-| `payload` | what leaves for the backend? | yes |
+## Rules
 
-`facts` is the only shared intermediate: it is written once and read by
-everything after it. `outcome` and `payload` are the two ends — `outcome` is
-the meaning (`price: 59.9`), `payload` is the wire format
-(`valor_centavos: 5990`) — and the payload may quote the outcome so a price
-isn't computed twice.
+| | what it does |
+|---|---|
+| `canShow` | hides the field, and drops it from validation |
+| `clearWhenHidden` | resets it to its initial value once hidden |
+| `options` | a derived list; wins over the one declared on the field |
+| `onChange` | a side effect, writing through `ctx.patch()` |
 
-### Why a builder and not a plain object
+`canShow` returning false removes the field from validation. That's what erases
+most `.when()` calls: the condition was stated once.
 
-Not aesthetics. In a single object literal TypeScript infers every property at
-once, and `rules` **could not see** the inferred type of `facts`. Each
-`.withX()` returns a new type carrying what has accumulated so far — the same
-reason tRPC, Zod and Kysely use builders.
+`clearWhenHidden` is opt-in because it erases data — in a multi-step form a
+hidden field usually needs to keep what the user typed.
 
-### `facts` is the center
+`onChange` writes through `ctx.patch()`, which is a **request**: the engine only
+applies it if that invocation is still the most recent one, so a slow lookup
+can't overwrite newer input.
 
-The business rule exists once and is consumed by rules, schema and meta.
-Without it, the same condition ends up written twice — once in the field's
-visibility, once in a `.when()` in the schema — and changing one without the
-other produces no error at all.
+## Validation
 
-### Schema: one validator per field
-
-You don't declare a composed schema; you declare **one validator per field**:
+One validator per field, not a composed schema:
 
 ```ts
-.withSchema({
+addSchemas(campos, {
   name: string().required('Name is required'),
-  email: string().email('Invalid email'),
+  // a getter when it depends on the form's state
+  regiao: () => string().oneOf(valoresValidos(campos)).required(),
 })
 ```
 
-Three things fall out of that:
-
-1. **A field that doesn't exist won't compile** — declaring `surname: string()`
-   on a form without a `surname` field is a build error. Validating a field
-   that doesn't exist makes no sense.
-2. **Hidden fields are skipped**, with no need for `.omit()` — which was the
-   only part tied to a specific library.
-3. **Any library works**: the engine only touches `~standard.validate`. Zod,
-   Valibot, ArkType and yup 1.7+ all work with no adapter, and none of them is
-   a dependency of this package.
-
-When you need the context, use `ctx.shape()`:
-
-```ts
-.withSchema(ctx => ctx.shape({
-  region: ctx.facts.isBusiness ? string().required() : string().nullable(),
-}))
-```
-
-`shape` is not decoration: when the object comes from the **return of an arrow
-function**, TypeScript cannot check the keys (inference becomes circular).
-Passed as a direct argument, the check works again.
-
-### Validating
+A plain validator is read once, which is right when it never changes and wrong
+when it does — hence the getter form.
 
 ```ts
 const { valid, errors, firstErrors } = await form.validate()
 ```
 
-Validates **only the visible fields**. If your form library wants a composed
-schema instead, hand it your library's combinator:
+If your form library wants a composed schema, hand it your combinator:
 
 ```ts
 const schema = form.composeSchema(object)    // yup
 const schema = form.composeSchema(z.object)  // zod
 ```
 
-You get a `ComputedRef` of whatever the combinator returns — yup's own
-`ObjectSchema`, zod's own `ZodObject` — ready for `useForm({ validationSchema: schema })`.
+Which library composes is your call. The **reactivity** isn't, and that's why
+this is a method: composing outside a `computed` freezes the schema at its first
+value, so a field a rule hides later stays required — a bug that only shows up
+on the branch that hides something.
 
-Which library composes stays your call; the module has no idea which one is
-right. What isn't your call is the **reactivity**, and that's why this is a
-method instead of a line in your component:
+### Submitting is not this module's job
 
-```ts
-// ✗ frozen at the first value: a field canShow hides later stays required
-const schema = object(form.shape.value)
-```
+There is deliberately no `onSubmit` or `onSchemaError`. The module provides
+schema and state; running validation and submission belongs to your form
+library — vee-validate, FormKit, or your own wrapper.
 
-That bug only shows up on the branch of the form that hides something — the
-branch nobody tests first.
-
-`form.shape` is still there when you want the parts. It hands back the
-validator types **you declared**, not an erased `StandardSchemaV1` — that's what
-makes `object()` and `z.object()` accept it, since both demand their own
-library's schema type.
-
-A key is optional in `shape` only when a `canShow` rule can hide it, which is
-exactly when the runtime may drop it. Marking every key optional would be the
-easy way out and would break the composition above: yup and zod both reject a
-`Schema | undefined` value.
-
-Splitting the schema into its own file through `SchemaOf` is the one case that
-still erases the types — the annotation is what the compiler sees, so it can't
-recover more than `SchemaOf` promises. Compose from `validate()` there, or
-declare the schema inline.
-
-### Hidden fields are not validated
-
-`canShow` returning false removes the field from validation. That's what
-erases most `.when()` calls: the condition was already stated once.
-
-That covers "the field **doesn't exist** right now". What it does not cover is
-"the field exists, but the **rule changes**" — and that's where `ctx` in the
-schema earns its place:
-
-```ts
-.withSchema(ctx => ctx.shape({
-  // no .when(): when the type doesn't match, canShow hides it and the engine drops it
-  ssn: string().required().length(11),
-
-  // always visible, required only for businesses — visibility can't express this
-  region: ctx.facts.isBusiness ? string().required() : string().nullable(),
-}))
-```
-
-If the schema does **not** depend on the context, pass the object directly
-instead of a function — the function form is rebuilt on every form change:
-
-```ts
-.withSchema({ name: string().required() })
-```
-
-### `metadata`: the catalog entry
-
-Title, route, category, keywords, ordering, which component renders the form —
-none of it depends on anyone filling anything in:
-
-```ts
-createFormDomain('prenuptial-deed')
-  .withMetadata({
-    title: 'Prenuptial Agreement Deed Certificate',
-    to: '/services/certificates/deeds/prenuptial',
-    category: 'deeds',
-    keywords: ['prenuptial', 'deed', 'marriage'],
-    order: 355,
-  })
-```
-
-Being static is the point, not the style: `metadata` hangs off the **factory**,
-so a listing reads every domain without building a single form.
-
-```ts
-useFormDomainsMetadata()  // no instance created
-useFormDomainsOutcome()   // instantiates every domain — an outcome needs a filled form
-```
-
-That distinction is why this isn't just "static meta". A catalog of 300
-certificates used to create 300 effect scopes to render 300 links.
-
-### Where each thing lives
-
-The split isn't "UI vs business", it's **static vs derived**:
-
-| | where | example |
-|---|---|---|
-| doesn't depend on state | `fields` | `label`, initial value, `mask`, a fixed list of states |
-| depends on state | `rules` | `canShow`, options that change with another field, `onChange` |
-
-That's why `options` can appear in both: a fixed list is structure, a list that
-changes is a rule. When both exist, **the rule wins**.
-
-This doesn't leak into consumption — `form.options.field` resolves both
-origins, so the template never needs to know which layer declared it:
+## `register()` builds the input props
 
 ```vue
-<option v-for="o in form.options.region" :key="o.value">{{ o.label }}</option>
+<MyInput v-bind="form.register('name')" />
 ```
 
-Derived options are a function of the context, which is why they **don't need
-the reset branch** the imperative version would require.
-
-### The selected option's label
-
-The field stores **only the `value`**. To show the human-readable text (in a
-cart, in a summary), use `selected`:
+It provides `name`, `label`, `modelValue` and the `update:modelValue` handler,
+plus `options`, `placeholder` and `mask` **only when the field declares them** —
+and that is a statement about the type, not just the runtime object:
 
 ```ts
-form.values.region          // 'first'
-form.selected.region?.label // 'First Region'
+form.register('perfil').options   // ok, this field declares a list
+form.register('name').options     // ✗ this field declares none
 ```
 
-Storing the `{ label, value }` object in the field looks convenient and costs a
-lot: `v-model` on a select starts comparing by identity (breaking when state is
-restored), `oneOf` compares references, the payload carries an object where the
-API expects a scalar, and the stored label **freezes** — change the list and
-the text stays stale.
-
-Derived, the text follows along on its own. `meta` also receives
-`ctx.selected`, so the cart line can come straight from the domain:
+The handler accepts `TValue | undefined`. A component written the ordinary way
+emits the wider type:
 
 ```ts
-.withOutcome(ctx => ({ summary: `Region: ${ctx.selected.region?.label ?? '—'}` }))
+const model = defineModel<string>()  // emits string | undefined
 ```
 
-`options` deliberately does **not** receive `selected`: an options rule that
-depended on the selected option would recurse. Separate contexts make that
-impossible by construction.
+Under `strictFunctionTypes` a handler taking only `string` is **not** assignable
+to that, and `v-bind` would fail to compile on the most common way to write an
+input.
 
-### `payload`: what leaves for the backend
+## The option's label
 
-`selected` solves the live read, but doesn't put anything in what gets sent. If
-your backend needs the text — a persisted cart, an invoice, history — project
-it:
+The field stores **only the value**. For the human-readable text, read it off
+the field:
 
 ```ts
-.withPayload(ctx => ({
+form.values.value.regiao      // 'first'
+campos.regiao.selected?.label // 'First Region'
+```
+
+Derived, never stored: change the list and the text follows instead of going
+stale. Storing the `{ label, value }` object instead would break `v-model` by
+identity, break `oneOf`, and send an object where the API expects a scalar.
+
+## `payload`: what leaves for the backend
+
+```ts
+.payload(ctx => ({
   ...ctx.visible,
-  region_description: ctx.selected.region?.label ?? '',
-  price: ctx.outcome.price,
+  region_label: ctx.fields.regiao.selected?.label ?? '',
+  price: ctx.price.value,
 }))
 ```
 
-`data.region.label` is **not** for this: it's the field's label ("Region"), not
-the choice's text ("First Region") — two meanings sharing a name.
+The payload is a **projection** of the form, not a set of fields. Without one it
+is simply `values`.
 
-The payload is a **projection** of the form, not a set of fields. That matters
-because the alternative — the shape this module used to have — was to force
-anything the payload needed into a field nobody fills: a phantom `field()`, a
-rule mirroring the label into it, and a second rule hiding it from the screen.
-Three declarations for one idea, and derived data kept as state, which is the
-staleness this engine argues against everywhere else.
-
-Computed on read, so a label resolved from an options list that depends on
-another field is right by construction rather than right because a watcher kept
-up.
+It sits outside the setup on purpose: it becomes a pure function of what the
+setup exposed, so it is testable without instantiating and cannot reach anything
+the setup kept private. That also gives the setup's return a job — it is the
+public surface.
 
 **`values` or `visible`, your call.** `values` is every field; `visible` is only
-what a `canShow` is currently letting through. A backend that wants the key
-always present spreads `values`; one that must not receive the opposite group's
-document spreads `visible`. Both reach the context because neither answer is
-right for everyone — and the engine picking one would be a silent decision.
-
-Splitting it into its own file keeps the precise type, unlike `SchemaOf`,
-because the helper annotates the **parameter** and lets the return be inferred:
-
-```ts
-// forms/federal-court/payload.ts
-export const payload = (ctx: PayloadContextOf<Base, CourtOutcome>) => ({
-  ...ctx.visible,
-  region_description: ctx.selected.region?.label ?? '',
-})
-```
-
-### Reactive outcome
-
-`outcome` is a function of the context, so variable data (a price that depends
-on the person type) stays reactive — with no separate place for "dynamic
-outcome". What is genuinely constant belongs in `metadata`, which is a
-different question, not a different flavour of the same one.
-
-## Clearing a field that disappeared
-
-Switching from individual to business can't leave a filled SSN travelling to
-the backend. Instead of repeating the condition in an `onChange`, mark the
-field:
-
-```ts
-rules: {
-  ssn: { canShow: ctx => ctx.facts.isIndividual, clearWhenHidden: true },
-  ein: { canShow: ctx => ctx.facts.isBusiness, clearWhenHidden: true },
-}
-```
-
-`canShow` already said when the field exists; `clearWhenHidden` reuses that
-condition. Writing the clearing by hand gets two cases wrong easily: **the
-empty value** (which hides both groups at once) and **new fields** added to the
-group later.
-
-It's opt-in because it erases data — in a multi-step form, a hidden field
-usually needs to keep what the user typed.
-
-For conditional clearing that doesn't follow visibility, `onChange` is still
-available.
-
-### `onChange` writes through `ctx.patch()`
-
-```ts
-rules: {
-  ein: {
-    onChange: async (ein, ctx) => {
-      const company = await lookupCompany(ein)
-      ctx.patch({ legal_name: company.name, city: company.city })
-    },
-  },
-}
-```
-
-`patch` is a **request**, not a direct write: if the field changes again before
-the response arrives, the engine discards it — a slow lookup never overwrites
-newer data.
-
-That's also why a rule cannot write to `ctx.data` directly: without the engine
-in between, there would be nowhere to intercept the stale response.
-
-And the rule's **return value is ignored**, on purpose. If writes came from the
-return value, a helper that happens to return an object would change the form
-with nobody asking — and nothing in the code would say so.
-
-## Consuming
-
-```vue
-<script setup lang="ts">
-import useFederalCourt from '~/forms/federal-court'
-
-const { data, canShow, options, values, outcome, payload, validate } = useFederalCourt()
-</script>
-
-<template>
-  <input v-if="canShow.ssn" v-model="data.ssn.value" :placeholder="data.ssn.label">
-</template>
-```
-
-Destructuring is the recommended usage: derived state comes back as
-`ComputedRef`, and templates unwrap top-level refs automatically. Keeping the
-whole object instead would force `form.canShow.value.ssn` even inside a `v-if`.
-
-## Shared instance
-
-`useMyDomain()` always returns **the same instance** — like `defineStore`. That
-solves the form split across sub-components: any child calls the composable and
-gets the same state, with no prop drilling, and the `onChange` watchers are
-registered **exactly once**.
-
-Watchers live in a detached `effectScope`, so they belong to the domain rather
-than to whichever component instantiated it first — if that component unmounts,
-the effects keep working for the others.
-
-Under SSR, instances live on the request's app, never in a module variable.
-
-## Splitting into files
-
-`fields` and `facts` stay together (they're the source of the types); the
-rest moves out:
-
-```
-forms/federal-court/
-├── domain.ts   → createFormDomain().withFields().withFacts()
-├── rules.ts    → RulesOf<Base>
-├── schema.ts   → SchemaOf<Base>
-├── meta.ts     → OutcomeOf<Base, MyMeta>
-└── index.ts    → base.withRules(rules).withSchema(schema).withOutcome(meta).build()
-```
-
-`RulesOf`, `SchemaOf` and `OutcomeOf` extract the context from the partial
-builder — without them each file would try to reconstruct the types and hit a
-circular import.
+what a rule is currently letting through. A backend that wants the key always
+present spreads the first; one that must not receive the opposite group's
+document spreads the second. Both reach the context because neither answer is
+right for everyone.
 
 ## Catalog
 
-Domains under `<srcDir>/forms` are discovered automatically:
-
 ```ts
-const domain = useFormDomain('federal-court') // typed: that domain's fields, facts and outcome
-const catalog = useFormDomainsMetadata()      // catalog entries, NO instance created
-const all = useFormDomains()                  // instantiates all of them
-const outcomes = useFormDomainsOutcome()      // ditto, plus each outcome
+const domain = useFormDomain('federal-court')  // typed to THAT domain
+const catalog = useFormDomainsMetadata()       // no setup runs
+const all = useFormDomains()                   // runs every setup
 ```
 
-`useFormDomain` instantiates **only** the requested domain: the factory is
-registered at `build()` time without creating reactive state.
-
 `useFormDomainsMetadata` instantiates **nothing** — `metadata` is static, so it
-is read straight off the factory. That's the one to reach for in a listing. The
-other two build every domain, which is the inherent cost of needing reactive
-values from all of them at once.
+is read straight off the factory. That's the one for a listing: 300 certificates
+cost 300 property reads, not 300 setups.
 
 `x.ts` and `x/index.ts` are the same domain; if both exist, the directory wins.
+
+## Scaling up
+
+Up to around eight fields, one file. Above that, split by **section** rather
+than by layer — the unit you navigate is "the address block", not "all the
+rules". `addRules` and `addSchemas` are callable as many times as you like, so
+one file owns its block's rule *and* its validation:
+
+```ts
+// sections/documento.ts
+export function documento(campos: Campos) {
+  addRules(campos, { cpf: { canShow: () => isPF(campos), clearWhenHidden: true } })
+  addSchemas(campos, { cpf: string().required() })
+}
+```
+
+`fields` and anything derived stay central, because they are what the sections
+share. What crosses a file boundary is `Campos = ReturnType<typeof createFields>`
+— a type from your own factory, not from this package.
+
+## Fields at module scope leak under SSR
+
+Fields are reactive state, and declared at module scope they are built once per
+process — so the second request drives the objects the first one filled in.
+
+Wrap them in a factory:
+
+```ts
+export const createFields = () => fields({ /* ... */ })
+export type Campos = ReturnType<typeof createFields>
+```
+
+The types can't see this, so it is caught at runtime: one fields object driving
+two forms logs a warning naming the cause. It is a warning and not a throw
+because by then the app is serving, and turning a data leak into a blank page
+helps nobody.
 
 ## What the compiler guarantees
 
 | Error | When it surfaces |
 |---|---|
-| `rules` referencing a field that doesn't exist | **compile time** |
-| `schema` validating a field that doesn't exist | **compile time** |
-| `ctx.facts` with an undeclared key | **compile time** |
-| `set()` with a wrong field or type | **compile time** |
-| `outcome` or `payload` with a key that doesn't exist | **compile time** |
-| `useFormDomain('unknown-slug')` | **compile time** |
+| `addRules`/`addSchemas` naming a field that doesn't exist | **compile time** |
+| `register()` on a field that doesn't exist | **compile time** |
 | `register()` reading an extra the field never declared | **compile time** |
 | an option whose value doesn't match the field's | **compile time** |
-| a layer declared before `withFields` | **compile time** |
-| `onChange` patching a field that doesn't exist | ignored at runtime |
-
-The last one is a known limitation — the generic that validates `rules` keys
-loosens the patch type. It's covered by a test rather than by contorting the
-types to the point where the error message becomes unreadable.
-
-The order rule is worth knowing for what it prevents. `withFields` is what
-gives the key check something to check against; declared before it, `keyof F`
-is the whole `string` type and every key passes. The failure was silent — it
-looked like the check ran — so it now names the cause instead:
-
-```ts
-createFormDomain('x')
-  .withRules({ anything: { canShow: () => true } })  // ✗ declare withFields first
-  .withFields({ /* ... */ })
-```
+| `useFormDomain('unknown-slug')` | **compile time** |
+| the payload reading a key it doesn't project | **compile time** |
+| `ctx.patch()` with a field that doesn't exist | ignored at runtime |
+| fields shared across requests | runtime warning |
 
 ## API
 
 ```ts
-const form = useMyDomain()
+field({ label, value })        // one field, reusable across domains
+fields({ name: { ... } })      // the form's fields, named
 
-form.id          // slug, as a literal type
-form.data        // reactive: { field: { key, label, value, mask? } }
-form.values      // plain values
-form.metadata    // the catalog entry — static, also on the factory
-form.facts       // the domain's conclusions, shared downstream
-form.canShow     // { field: boolean } — a field with no rule is visible
-form.options     // effective options per field
-form.selected    // the selected option — where the friendly label comes from
-form.shape       // visible validators, with the types you declared
-form.composeSchema(object) // the same, composed by your library, reactive
-form.validate()  // validates visible fields only
-form.outcome     // price, sku, the cart line — reactive
-form.payload     // the projection for the backend; `values` if none declared
-form.register(k) // ready-made input props
-form.set(patch)  // partial, typed patch
-form.reset()     // back to initial values
-form.dispose()   // stops the watchers
+addRule(field, rule)           // behaviour for one field
+addRules(fields, { ... })      // for several, keyed
+addSchema(field, validator)    // validation for one
+addSchemas(fields, { ... })    // for several
+
+useForm(fields)                      // assemble inside a component
+defineFormDomain(id, meta?, setup)   // a shared domain
+  .payload(ctx => ({ ... }))         // optional projection
+```
+
+```ts
+const form = useFormDomain('federal-court')
+
+form.id           // slug, as a literal type
+form.fields       // the field objects: { label, value, key, selected }
+form.values       // every value
+form.visible      // only what a rule allows through
+form.canShow      // { field: boolean }
+form.options      // effective options per field
+form.shape        // visible validators, with the types you declared
+form.composeSchema(object)  // the same, composed by your library, reactive
+form.validate()   // validates visible fields only
+form.payload      // the projection, or `values` if none declared
+form.register(k)  // ready-made input props
+form.set(patch)   // partial, typed patch
+form.reset()      // back to initial values
+form.dispose()    // stops the effects
 ```
 
 ## Development
 
 ```bash
-pnpm dev:prepare   # required before test/typecheck (generates the playground .nuxt)
-pnpm test
+pnpm install
+pnpm bootstrap   # generates the playground's .nuxt
+pnpm lint
 pnpm typecheck
-pnpm typecheck:playground
-pnpm dev
+pnpm test
+pnpm build
 ```
 
-`playground/app/pages/domain-guard.vue` and `catalog-guard.vue` hold the type
-guarantees with `@ts-expect-error`: if one regresses, the directive becomes
-unused and typecheck fails instead of silently passing.
+The playground has `domain-guard` and `catalog-guard` pages whose type errors
+are **expected**, asserted with `@ts-expect-error`. If a guarantee regresses the
+directive goes unused and typecheck fails, instead of the breakage reaching a
+project.
 
 ## License
 

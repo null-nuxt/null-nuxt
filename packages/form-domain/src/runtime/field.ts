@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import type { FieldOption } from './setup-types'
+import type { FieldOption } from './form-types'
 
 /**
  * What a field is declared with. Structure only — anything that depends on the

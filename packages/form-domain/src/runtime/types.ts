@@ -19,7 +19,7 @@ export type {
   FieldOption,
   FormEngine,
   ValuesOf,
-} from './setup-types'
+} from './form-types'
 
 export type {
   FormDomain,

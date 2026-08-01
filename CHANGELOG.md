@@ -5,13 +5,58 @@ All notable changes to this project are documented here. The format follows
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 independently.
 
-Each package is tagged on its own — `form-domain@0.2.1`, `tracking@0.1.0` —
+Each package is tagged on its own — `form-domain@0.3.0`, `tracking@0.1.0` —
 because they are installed and pinned separately. The repo-wide `v0.1.0` tag
 predates that and is kept only so existing pins keep resolving.
 
 ## [Unreleased]
 
 Nothing yet.
+
+## `@null-nuxt/form-domain` 0.3.0 — 2026-08-01
+
+The builder is gone. A form is now a setup function.
+
+### Changed
+
+- **`createFormDomain` and the whole `withX` chain are replaced** by
+  `defineFormDomain(id, metadata?, setup)` for a shared domain and
+  `useForm(fields)` for one inside a component — where no wrapper is needed at
+  all, since `<script setup>` is already the scope.
+
+  The chain existed for one reason: inside a single object literal TypeScript
+  infers every property at once, so `rules` could not see the inferred type of
+  `facts`. A setup has no literal — each line is a declaration and inference
+  runs top to bottom — so the limitation is gone rather than worked around.
+
+- **Rules and validation are attached to the field**, with the field as the
+  argument: `addRule(campos.cpf, { ... })`, or `addRules(campos, { ... })` for
+  several. Nothing needs to know which form is "current", so these are callable
+  from any file without an ambient registry, and the rules stay a separable
+  layer. They are also callable any number of times, so a large domain can be
+  split by section — one file owning a block's rule *and* its validation —
+  instead of by layer.
+
+- **`facts` and `outcome` stop being layers** and become plain `computed`. The
+  setup returns its fields under the reserved `fields` key and everything else
+  it returns is exposed untouched; nothing is classified.
+
+### Removed
+
+- **`RulesOf`, `SchemaOf`, `OutcomeOf`, `ContextOf` and `PayloadContextOf`.**
+  These existed so a split-file domain could reconstruct the builder's
+  accumulated types — library plumbing a consuming project had to import to use
+  the feature. What crosses a file boundary now is
+  `ReturnType<typeof createFields>`, a type from the project's own factory. The
+  ported domain went from five such imports to none.
+
+### Added
+
+- **A warning when one fields object drives two forms.** Fields are reactive
+  state, and declared at module scope they are built once per process, so under
+  SSR the second request drives what the first one filled in. The types cannot
+  see this, so it is caught at runtime, on the condition that is the bug rather
+  than a proxy for it. Wrap fields in a factory and call it inside the setup.
 
 ## `@null-nuxt/form-domain` 0.2.1 — 2026-08-01
 
@@ -181,5 +226,5 @@ it is listed under `Added` rather than split across change types.
   helpers, which extract the context from a partial builder and avoid a
   circular import.
 
-[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.2.1...HEAD
+[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.3.0...HEAD
 [0.1.0]: https://github.com/null-nuxt/null-nuxt/releases/tag/v0.1.0

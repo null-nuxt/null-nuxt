@@ -6,7 +6,7 @@ tracking and form definition.
 | package | what it solves |
 |---|---|
 | [`@null-nuxt/tracking`](packages/tracking) | anonymous identity, attribution, page views, a click directive and delivery — with a pluggable wire format and identity strategy |
-| [`@null-nuxt/form-domain`](packages/form-domain) | a form declared in layers (fields, rules, schema, meta) and consumed through composables, in the style of `defineStore` |
+| [`@null-nuxt/form-domain`](packages/form-domain) | a form declared as a setup function — fields, rules, validation, payload — consumed through composables, in the style of `defineStore` |
 
 ## Why they exist
 
@@ -56,7 +56,7 @@ Pin a tag for reproducible installs. Each package is tagged on its own, since
 they are versioned and pinned separately:
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#form-domain@0.2.1&path:/packages/form-domain"
+pnpm add "github:null-nuxt/null-nuxt#form-domain@0.3.0&path:/packages/form-domain"
 pnpm add "github:null-nuxt/null-nuxt#tracking@0.1.0&path:/packages/tracking"
 ```
 

@@ -2,7 +2,7 @@ import { computed, effectScope, getCurrentScope, onScopeDispose } from 'vue'
 import { getFormRegistry } from './registry'
 import { createEngine } from './engine'
 import type { ComputedRef } from 'vue'
-import type { AnyFields, Exposed, FormEngine, SetupResult, ValuesOf } from './setup-types'
+import type { AnyFields, Exposed, FormEngine, SetupResult, ValuesOf } from './form-types'
 
 /**
  * A form assembled inside a component. The component's own `setup` is already

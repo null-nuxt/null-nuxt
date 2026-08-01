@@ -3,7 +3,7 @@ import { runStandard } from './standard'
 import { claimFields, releaseFields } from './claim'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { ValidationResult } from './standard'
-import type { AnyFields, FieldOption, FormEngine, ValuesOf } from './setup-types'
+import type { AnyFields, FieldOption, FormEngine, ValuesOf } from './form-types'
 
 /**
  * Everything derived from a fields object, once the rules and validators have
