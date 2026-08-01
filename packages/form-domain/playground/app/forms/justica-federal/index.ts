@@ -49,7 +49,7 @@ export default defineFormDomain('justica-federal', metadata, () => {
    */
   .payload(ctx => ({
     ...ctx.visible,
-    regiao_descricao: ctx.fields.regiao.selected?.label ?? '',
+    regiao_descricao: ctx.selected.regiao?.label ?? '',
     price: ctx.price.value,
     sku: ctx.sku.value,
     produto: metadata.category,

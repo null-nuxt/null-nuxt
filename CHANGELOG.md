@@ -11,7 +11,16 @@ predates that and is kept only so existing pins keep resolving.
 
 ## [Unreleased]
 
-Nothing yet.
+### `@null-nuxt/form-domain` — Added
+
+- **`form.selected`**, the chosen option per field, back on the engine.
+  Reaching it was the only reason a consumer needed the raw field objects, so
+  `form.values.x` and `form.fields.x.value` were two ways to the same value with
+  nothing to say which. The payload context gets it too, which flattens the one
+  nested read it had.
+
+  Additive: the field object still carries its own `selected`, which is what a
+  setup reads off the const it declared.
 
 ## `@null-nuxt/form-domain` 0.4.0 — 2026-08-01
 

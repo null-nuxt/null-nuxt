@@ -554,3 +554,47 @@ describe('instância e efeitos', () => {
     expect(spy).toHaveBeenCalledOnce()
   })
 })
+
+describe('selected no engine', () => {
+  /**
+   * Estava só no objeto do campo, e alcançá-lo era a única razão de um
+   * consumidor precisar dos campos crus — o que criava dois caminhos pro mesmo
+   * dado. No engine, o payload e o componente leem plano.
+   */
+  it('resolve o texto da escolha sem passar pelos campos', async () => {
+    const f = montar()
+    const form = toForm(f)
+
+    form.set({ tipoPessoa: 'PF', regiao: 'primeira' })
+    await nextTick()
+
+    expect(form.selected.value.regiao?.label).toBe('1ª Região')
+    expect(form.selected.value.regiao).toEqual(f.regiao.selected)
+  })
+
+  it('esvazia quando a escolha sai da lista', async () => {
+    const f = montar()
+    const form = toForm(f)
+
+    form.set({ tipoPessoa: 'PF', regiao: 'primeira' })
+    await nextTick()
+    form.set({ tipoPessoa: 'PJ' })
+    await nextTick()
+
+    expect(form.selected.value.regiao).toBeUndefined()
+  })
+
+  it('o payload lê selected direto do contexto', async () => {
+    const domain = defineFormDomain('selected-payload', () => ({ fields: montar() }))
+      .payload(ctx => ({
+        ...ctx.visible,
+        regiao_descricao: ctx.selected.regiao?.label ?? '',
+      }))
+
+    const form = domain()
+    form.set({ tipoPessoa: 'PF', regiao: 'primeira' })
+    await nextTick()
+
+    expect(form.payload.value.regiao_descricao).toBe('1ª Região')
+  })
+})

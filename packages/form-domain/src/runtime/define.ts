@@ -2,7 +2,7 @@ import { computed, effectScope, getCurrentScope, onScopeDispose } from 'vue'
 import { getFormRegistry } from './registry'
 import { createEngine } from './engine'
 import type { ComputedRef } from 'vue'
-import type { AnyFields, Exposed, FormEngine, SetupResult, ValuesOf } from './types'
+import type { AnyFields, Exposed, FormEngine, SelectedOptions, SetupResult, ValuesOf } from './types'
 
 /**
  * A form assembled inside a component. The component's own `setup` is already
@@ -31,6 +31,8 @@ type PayloadContext<S extends SetupResult> = Exposed<S> & {
   fields: S['fields']
   /** Only what a rule is currently letting through. */
   visible: Partial<ValuesOf<S['fields']>>
+  /** The chosen option per field — where a label goes into the payload from. */
+  selected: SelectedOptions<S['fields']>
 }
 
 export type FormDomainInstance<S extends SetupResult, P, Id extends string = string> =
@@ -89,6 +91,9 @@ function create<Meta, S extends SetupResult, Id extends string>(
           fields: result.fields,
           get visible() {
             return engine.visible.value
+          },
+          get selected() {
+            return engine.selected.value
           },
         }
 

@@ -259,9 +259,14 @@ The field stores **only the value**. For the human-readable text, read it off
 the field:
 
 ```ts
-form.values.value.regiao      // 'first'
-campos.regiao.selected?.label // 'First Region'
+form.values.value.regiao        // 'first'
+form.selected.value.regiao?.label // 'First Region'
 ```
+
+Inside a setup you can read it off the field you declared —
+`campos.regiao.selected` — since that's your own variable. From outside, go
+through `selected`: reaching it was the only reason a consumer needed the raw
+fields, and two ways to the same value is one too many.
 
 Derived, never stored: change the list and the text follows instead of going
 stale. Storing the `{ label, value }` object instead would break `v-model` by
@@ -378,6 +383,7 @@ form.fields       // the field objects: { label, value, key, selected }
 form.values       // every value
 form.visible      // only what a rule allows through
 form.canShow      // { field: boolean }
+form.selected     // the chosen option per field
 form.options      // effective options per field
 form.shape        // visible validators, with the types you declared
 form.composeSchema(object)  // the same, composed by your library, reactive

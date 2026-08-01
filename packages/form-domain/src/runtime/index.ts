@@ -18,6 +18,7 @@ export type {
   FieldBindings,
   FieldOption,
   FormEngine,
+  SelectedOptions,
   ValuesOf,
 } from './types'
 

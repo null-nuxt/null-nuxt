@@ -3,7 +3,7 @@ import { runStandard } from './standard'
 import { claimFields, releaseFields } from './claim'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { ValidationResult } from './standard'
-import type { AnyFields, FieldOption, FormEngine, ValuesOf } from './types'
+import type { AnyFields, FieldOption, FormEngine, SelectedOptions, ValuesOf } from './types'
 
 /**
  * Everything derived from a fields object, once the rules and validators have
@@ -39,6 +39,12 @@ export function createEngine<F extends AnyFields>(fields: F): FormEngine<F> {
       if (canShow.value[key] !== false) result[key] = fields[key]!.value
     }
     return result as Partial<ValuesOf<F>>
+  })
+
+  const selected = computed(() => {
+    const result: Record<string, FieldOption<unknown> | undefined> = {}
+    for (const key of keys) result[key] = fields[key]!.selected
+    return result as SelectedOptions<F>
   })
 
   const options = computed(() => {
@@ -153,6 +159,7 @@ export function createEngine<F extends AnyFields>(fields: F): FormEngine<F> {
     values,
     visible,
     canShow,
+    selected,
     options,
     shape,
     composeSchema,

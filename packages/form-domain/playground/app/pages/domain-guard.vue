@@ -57,6 +57,13 @@ void handler
 const schema = form.composeSchema(object)
 void schema.value.describe
 
+/** `selected` sai do engine, sem precisar dos campos crus. */
+const escolhido: string | undefined = form.selected.value.perfil?.label
+void escolhido
+
+// @ts-expect-error campo fora de fields
+void form.selected.value.sobrenome
+
 /** `visible` é parcial; `values` é completo. */
 const parcial: string | undefined = form.visible.value.username
 const completo: string = form.values.value.username

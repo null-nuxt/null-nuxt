@@ -14,6 +14,16 @@ export type AnyFields = Record<string, FieldObj<any, any>>
 export type ValuesOf<F extends AnyFields> = { [K in keyof F]: F[K]['value'] }
 
 /**
+ * The option matching each field's current value, resolved from the effective
+ * list. The field still stores only the value — storing the whole object would
+ * break `v-model` by identity, break `oneOf`, and send an object where the API
+ * expects a scalar.
+ */
+export type SelectedOptions<F extends AnyFields> = {
+  [K in keyof F]: FieldOption<F[K]['value']> | undefined
+}
+
+/**
  * A key outside `Allowed` becomes `never`, which nothing satisfies — that's
  * what makes `addRules(fields, { missing: ... })` fail to compile.
  *
@@ -82,6 +92,13 @@ export interface FormEngine<F extends AnyFields> {
   /** Only what a rule is currently letting through. */
   visible: ComputedRef<Partial<ValuesOf<F>>>
   canShow: ComputedRef<{ [K in keyof F]: boolean }>
+  /**
+   * Where the friendly text comes from: `form.selected.region?.label`.
+   *
+   * On the engine rather than only on the field object, so reaching it doesn't
+   * require the raw fields — that was the one thing consumers needed them for.
+   */
+  selected: ComputedRef<SelectedOptions<F>>
   options: ComputedRef<{ [K in keyof F]: ReadonlyArray<FieldOption<F[K]['value']>> }>
   /** Validators for the visible fields, with the types you declared. */
   shape: ComputedRef<Record<string, unknown>>
