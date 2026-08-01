@@ -1,203 +1,232 @@
+eu tava pensando nesse formulario tmb ser poder ser usado de forma simples pra algo simples por exemplo:
+
+```vue
+<script setup lang="ts">
+import { useCustomerStore } from '../../stores/customer'
+
+const props = withDefaults(defineProps<{
+  collectCustomerData?: boolean
+  submit: () => Promise<void>
+}>(), {
+  collectCustomerData: true,
+})
+
+const { storeOrUpdateLead } = useCustomer()
+
+const { data, onSubmit, schema, canShow } = createFormDomain('customer-data-form')
+  .withFields({
+    name: field({ label: 'Nome Completo*', value: '' }),
+    email: field({ label: 'Email*', value: '' }),
+    phone: field({ label: 'Telfone*', value: '' }),
+    type: field({ label: 'Selecione seu perfil', value: '' }),
+    cpf: field({ label: 'CPF*', value: '' }),
+    cnpj: field({ label: 'CNPJ*', value: '' }),
+  })
+  .withComputed(ctx => ({
+    isPF: ctx.values.tipo === 'PF',
+  }))
+  .withRules({
+    cpf: { canShow: ctx => ctx.computed.isPF, clearWhenHidden: true },
+    cnpj: { canShow: ctx => !ctx.computed.isPF, clearWhenHidden: true },
+  })
+  .withSchema(ctx => object({
+    name: string()
+      .required('O nome é obrigatório')
+      .min(3, 'Nome deve ter pelo menos 3 caracteres')
+      .max(100, 'Nome deve ter no máximo 100 caracteres'),
+    email: string()
+      .required('O e-mail é obrigatório')
+      .email('Digite um e-mail válido'),
+    phone: string()
+      .required('O telefone é obrigatório'),
+    type: string().required('O campo perfil é obrigatório').typeError('O campo perfil é obrigatório'),
+    cpf: string().cpf().required(),
+    cnpj: string().cnpj().required()
+  }))
+  .withEvents({
+    onSubmit(values) {
+      await storeOrUpdateLead(value)
+      return await props.submit()
+    },
+    onSchemaError(err) {
+      console.log(err)
+    }
+  })
+  .build()
+</script>
+
+<template>
+  <div class="bg-white rounded-lg border border-line shadow-[0_1px_3px_rgba(11,37,69,0.04),0_4px_16px_rgba(11,37,69,0.03)] p-8 md:px-12 md:py-10">
+    <!-- Header -->
+    <div class="flex items-center gap-4 pb-6 mb-8 border-b border-line">
+      <div class="w-11 h-11 rounded-full bg-navy-900 grid place-items-center text-gold text-lg shrink-0">
+        ✉
+      </div>
+      <div>
+        <h2 class="font-serif font-bold text-[1.375rem] text-navy-900 leading-tight">
+          Dados do Solicitante
+        </h2>
+        <p class="text-sm text-navy-600 mt-1">
+          {{ collectCustomerData ? 'Informe seus dados para receber a certidão' : 'Os dados da sua conta serão usados nesta solicitação' }}
+        </p>
+      </div>
+    </div>
+
+    <FormDefault
+      :submit="onSubmit"
+      :schema="schema"
+      :scroll-to-error="true"
+    >
+      <div class="flex flex-col gap-10">
+        <div
+          v-if="!collectCustomerData"
+          class="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900"
+        >
+          <span
+            class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-bold text-white"
+            aria-hidden="true"
+          >✓</span>
+          <p>
+            Você está logado. Não é necessário informar novamente seus dados pessoais e de contato.
+          </p>
+        </div>
+
+        <!-- IDENTIFICAÇÃO -->
+
+        <section>
+          <h3 class="font-serif font-bold text-[1.0625rem] text-navy-900 flex items-center gap-2 mb-5 pb-2 border-b-2 border-gold">
+            <span class="text-gold text-lg leading-none">▸</span>
+            Identificação
+          </h3>
+          <div class="flex flex-col gap-5">
+            <FederalFormInput
+              v-if="canShow('name')"
+              v-model="data.name.value"
+              :name="data.name.key"
+              :label="data.name.label"
+              placeholder="Digite seu nome completo"
+            />
+
+            ou usar algo como:
+            <FederalFormInput
+              v-bind="data.name.registerFormField()"
+              placeholder="Digite seu nome completo"
+            />
+
+            <FederalFormSelect
+              v-model="customer.type"
+              name="type"
+              label="Perfil*"
+              placeholder="Selecione seu perfil"
+              :options="profileOptions"
+            />
+
+            ....demais campos
+          </div>
+        </section>
+      </div>
+
+      <!-- Botões de Ação -->
+      <template #button="{ isLoading }">
+        <div class="pt-6 border-t border-line mt-10 flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            class="sm:w-auto w-full text-center border border-line text-navy-700 hover:bg-surface font-semibold py-3.5 px-6 text-sm rounded-lg transition-all duration-200"
+            @click="emit('prev')"
+          >
+            ← Voltar
+          </button>
+          <button
+            type="submit"
+            :disabled="isLoading"
+            class="flex-1 text-center bg-navy-900 hover:bg-navy-950 text-gold font-bold py-4 px-8 uppercase tracking-[0.06em] text-sm rounded-lg transition-all duration-250 shadow-[0_2px_8px_rgba(11,37,69,0.2)] hover:shadow-[0_4px_16px_rgba(11,37,69,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ isLoading ? 'PROCESSANDO...' : 'CONTINUAR' }}
+          </button>
+        </div>
+      </template>
+    </FormDefault>
+  </div>
+</template>
+```
+
+eu queria tmb puder usar pra algo simples mas acho melhor a parte de submit ou onSchemaError pra lib que o cara ta usando que pode ser o vee-validate ou nuxtformkit e etc.
+mas as outras ideias acho que pode ser boa
 
 ---
 
-# Reprojeto da montagem: formato setup
+# Setup format: what was decided, and why
 
-Anotado depois de umas seis rodadas de desenho. O que está aqui é o formato
-que fechou e, principalmente, **por que** cada decisão — pra não refazer a
-discussão daqui a três meses.
+Kept as the record of a design that took several rounds. It is no longer a
+proposal — the format shipped and the builder is gone — so what is useful here
+is the reasoning, not the shape. The README describes the shape.
 
-## O que não fechava no builder
+## What the builder could not fix
 
-O builder existe por uma limitação só: num objeto literal o TypeScript infere
-tudo de uma vez, então `facts` não vê `fields` e `rules` não vê `facts`.
+The chain existed for one reason: inside a single object literal TypeScript
+infers every property at once, so `rules` could not see the inferred type of
+`facts`. Everything around it — the `withX` chain, the `RulesOf`/`SchemaOf`
+helpers a consuming project had to import, `ctx.shape()` — was a way around that
+one sentence.
 
-Toda a maquinaria em volta é contorno dessa frase — `withX` encadeado, os tipos
-`RulesOf`/`SchemaOf`/`OutcomeOf`/`PayloadContextOf`, o `ctx.shape()`. Cada
-tentativa de arrumar movia a feiura de lugar em vez de tirar:
+A setup has no literal. Each line is a declaration and inference runs top to
+bottom, so the limitation is gone rather than worked around.
 
-- os `*Of` obrigam o consumidor a importar encanamento interno pra dividir em
-  arquivos;
-- helpers de identidade no builder (`base.defineRules`) melhoram, mas dependem
-  de o builder mutar uma definição compartilhada;
-- três factories (`Base`/`Core`/`Payload`) tornam a dependência explícita, mas
-  encarecem o formulário inline, que é metade da razão do `use()` existir.
+Three attempts that did NOT work, worth not repeating:
 
-Em setup não existe objeto literal: cada linha é uma declaração e a inferência
-corre de cima pra baixo. A limitação some, não é contornada.
+- **Identity helpers on the builder** (`base.defineRules`) removed the type
+  imports but depended on the builder mutating a shared definition.
+- **Three staged factories** made the dependency an argument, at the cost of
+  turning the inline form into a nested call — and the inline form is half of
+  why the local terminal exists.
+- **Returning the layers from the setup** kept the key check working but moved
+  the error onto the whole function instead of the offending key. Measured.
 
-## Os dois formatos
+## Decisions that are load-bearing
 
-Não são dois jeitos de fazer a mesma coisa — são duas escalas, e a linha é a
-mesma que já separa `use()` de `build()`.
+- **`add*` takes its target explicitly.** No ambient "current form", so it is
+  callable from any file and has none of the hazards of a registry keyed on call
+  context. The rules stay a separable layer: grouping the calls elsewhere is
+  still a rules file.
+- **Rules attached, not chained onto the field.** `refField().canShow()` was
+  rejected: it co-locates by entity and kills the separation by concern.
+- **Keyed forms take a direct argument.** Measured: the same check from an
+  arrow's return puts the error on the whole function.
+- **`metadata` outside the setup.** Running a setup is instantiating, and a
+  catalog has to read it without that.
+- **`payload` outside the setup, one step.** Makes it a pure function of the
+  exposed surface — testable without instantiating, unable to reach what the
+  setup kept private, and it gives the return a job.
+- **Facts and outcome are plain `computed`.** Nothing is classified: the engine
+  only needs to know which returned values are the fields, and a reserved key
+  answers that. Pinia inspects its return because it owes `$state` and devtools
+  over arbitrary values; this owes neither.
+- **Declaring `options` is what makes a field a choice.** A rule can be attached
+  from anywhere at any time, so the declaration is the only fixed point from
+  which the question is answerable.
 
-### Componente: o `<script setup>` já é o escopo
+## Naming, and the collision that decided it
 
-```ts
-const form = fields({
-  username: { label: 'Username', value: '' },
-  personType: { label: 'Person Type', value: '' as 'individual' | 'company' | '' },
-  businessMail: { label: 'Business Email', value: '' },
-})
+Each prefix means what it means in Vue: `ref*` creates state, `to*` derives a
+shape, `define*` declares, `use*` consumes. `add*` sits outside on purpose —
+registration is neither, and borrowing a meaning it lacks is worse than none.
 
-const isCompanyUser = computed(() => form.personType.value === 'company')
+`useForm` and `useField` are vee-validate's, and most projects reaching for this
+have vee-validate too. That ruled out `useFields` and forced `toForm`.
+`createForm` was dropped because `create*` meant a builder here until recently.
 
-addRule(form.businessMail, {
-  canShow: () => isCompanyUser.value,
-  clearWhenHidden: true,
-})
+## Still open
 
-addSchemas(form, { username: string().required() })
+- **The return's shape.** `{ fields, price }` nested is correct and slightly
+  awkward; flat is nicer and lets a field named `price` collide silently. Nested
+  won. Worth revisiting after five domains are written.
+- **The name `refFields`.** The object it returns is the form under
+  construction, not a list of fields.
+- **The migration step** from the component form to the domain form: if
+  `defineFormDomain` accepted fields that already carry rules, migrating could be
+  gradual — at the cost of a rule being able to live in two places.
 
-const { register, canShow, composeSchema } = useForm(form)
-```
-
-### Domínio compartilhado: não tem componente onde morar
-
-```ts
-export const metadata = { title: '...', slug: 'certidao-jf', order: 120 }
-
-export default defineFormDomain('federal-court', metadata, () => {
-  const form = createFields()
-
-  const isPF = computed(() => form.tipoPessoa.value === 'PF')
-
-  regrasDe(form, isPF)     // outro arquivo
-  schemaDe(form, isPF)     // outro arquivo
-
-  return {
-    fields: form,
-    price: computed(() => isPF.value ? 59.9 : 89.9),
-  }
-})
-  .payload(ctx => ({
-    ...ctx.visible,
-    regiao_descricao: ctx.fields.regiao.selected?.label ?? '',
-    price: ctx.price.value,
-    produto: metadata.slug,
-  }))
-```
-
-## Decisões, com o motivo
-
-**`add*` mira sempre um campo ou o form explicitamente.** Nada de contexto
-ambiente tipo `onMounted`. Se a regra se anexa ao objeto do campo, `addRule` não
-precisa saber a que formulário pertence — e some a armadilha do "chamou fora do
-setup" e do "chamou depois de um await".
-
-**Regra anexada não é regra encadeada.** `field().canShow().validate()` foi
-recusado: co-loca tudo por entidade e mata a separação por contexto, que é a
-filosofia da lib. `addRule(form.cpf, {...})` chamado à parte preserva a
-separação — as chamadas podem estar agrupadas ou em outro arquivo.
-
-**Camadas como argumento direto, não como retorno.** Medido: com as camadas
-vindo do retorno de uma arrow, a checagem de chave desconhecida funciona mas o
-erro aterrissa na função inteira, não na chave. Como argumento direto
-(`addRules(form, {...})`) a squiggle fica no lugar certo.
-
-**`metadata` fora do setup.** Setup só produz valor se rodar, e rodar é
-instanciar. Metadata precisa ser legível sem instância pro catálogo listar 300
-certidões sem criar 300 effect scopes. É a única camada que não depende de
-preenchimento — por isso é a única que fica de fora.
-
-**`payload` fora do setup, como passo único.** Vira função pura da superfície
-que o setup expõe: testável sem instanciar, incapaz de alcançar o que o setup
-não expôs, e define pra que serve o `return` do setup (é o contrato público).
-Encadeamento de um passo só não tem ordem pra errar.
-
-**`facts` e `outcome` deixam de ser API.** São `computed` do Vue, expostos pelo
-return. A camada continua existindo como conceito; a lib não precisa mais
-sustentá-la. Sobram `field`/`fields`, `addRule(s)`, `addSchema(s)` e `payload`.
-
-**Vocabulário igual nos dois formatos.** `canShow` e `schema`, não `when` e
-`validate` — dois nomes pra mesma coisa é atrito que não some nunca. E
-`.validate()` colidiria com `form.validate()`, que faz outra coisa.
-
-## Fatos medidos
-
-Dois probes, não opinião:
-
-1. **Ordem errada no builder atual**: `rules` antes de `facts` e `payload` antes
-   de `outcome` já falham alto (`'ctx.facts' is of type 'unknown'`). O único
-   buraco é qualquer coisa **antes de `withFields`**, onde `F` ainda é genérico,
-   `FormValues<F>` vira `Record<string, any>` e `OnlyKnownKeys` desliga em
-   silêncio.
-2. **Diagnóstico no retorno de arrow**: a checagem fira (`never`), mas o erro
-   sai na função inteira. É o que justifica `add*` por argumento direto.
-
-## O ctx deixa de ser de graça
-
-A objeção mais forte ao formato setup. O `ctx` do builder era injeção de
-dependência dada pela lib: `ctx.facts.isPF` funcionava em rules, schema e
-outcome sem ligar nada. **A maquinaria que a gente quer deletar é a que pagava
-por isso.** Sem ela, a fiação é do projeto.
-
-Na forma ingênua escala mal — cada fact novo entra na assinatura de todo arquivo
-que o usa, o que é pior que `RulesOf<Base>`, não melhor:
-
-```ts
-export function regrasDe(
-  form: FederalCourtFields,
-  isPF: ComputedRef<boolean>,
-  isPJ: ComputedRef<boolean>,
-  isUrgente: ComputedRef<boolean>,
-) { /* ... */ }
-```
-
-A saída é agrupar, com o mesmo idioma usado nos campos:
-
-```ts
-// context.ts
-export const createContext = () => {
-  const fields = createFields()
-
-  // reactive() desembrulha os refs: lê-se `facts.isPF`, não `facts.isPF.value`
-  const facts = reactive({
-    isPF: computed(() => fields.tipoPessoa.value === 'PF'),
-    isUrgente: computed(() => fields.prazo.value === 'urgente'),
-  })
-
-  return { fields, facts }
-}
-
-export type FederalCourtContext = ReturnType<typeof createContext>
-
-// rules.ts — um parâmetro, um tipo, e fact novo não mexe em assinatura
-export function regrasDe({ fields, facts }: FederalCourtContext) {
-  addRules(fields, { cpf: { canShow: () => facts.isPF, clearWhenHidden: true } })
-}
-```
-
-Isso é o `ctx` do builder reinventado à mão, e não adianta fingir que não é.
-
-Custa: duas fábricas e uma linha de `ReturnType` por domínio.
-Deixa de custar: oito parâmetros de tipo, os cinco `*Of`, o `OnlyKnownKeys`, o
-`ctx.shape()`, a armadilha de ordem e a mutação de definição compartilhada.
-
-A diferença que decide: `FederalCourtContext` é derivado de uma fábrica **do
-projeto**; `RulesOf<typeof base>` é tipo da lib que só existe porque a lib tem
-um problema interno de inferência. Vocabulário contra vazamento.
-
-**Efeito colateral:** contexto montado pelo projeto deixa de ser fechado. Cabe
-`useCustomer()`, store, `route.params` — o que é liberdade e é corda. Nada
-impede pendurar chamada de API ali e tornar o domínio intestável sem mock. Se
-isso virar problema, é convenção no README, não tipo.
-
-## Em aberto
-
-- **`field()` no topo do módulo vaza estado entre requests em SSR.** É o mesmo
-  footgun do `ref()` no topo do módulo — modelo mental que o público já tem —
-  mas precisa de erro alto em dev, não de nota no README.
-- **Forma do return.** `{ fields: form, price }` aninhado é correto e feio;
-  plano é bonito e um campo chamado `price` colide em silêncio. Aninhado ganha,
-  mas revisar depois de uns cinco domínios escritos.
-- **Nome de `fields()`.** O objeto é o formulário em construção, não uma lista
-  de campos — `addPayload(form, ...)` lia estranho, e foi parte do que empurrou
-  o payload pra fora.
-- **`field()` singular ainda não tem caso de uso escrito.** O mais valioso é
-  campo reutilizável entre domínios (um CPF com máscara e validação que hoje é
-  copiado), com `fields({ cpf, cnpj })` aceitando campo pronto. Vale desenhar
-  junto, não depois.
-- **Degrau da migração** do formato de componente pro de domínio: se
-  `defineFormDomain` aceitar campos que já vieram com regra anexada, a migração
-  é gradual — ao custo de regra poder morar em dois lugares.
+Closed since: the SSR leak (a warning, on the condition that IS the bug), the
+singular `refField` use case (a field reused across domains, which `refFields`
+accepts alongside declarations), and the ordering hazard (a guard inside
+`OnlyKnownKeys` rather than an API change).

@@ -4,7 +4,7 @@ import { addImports, addTemplate, createResolver, defineNuxtModule } from '@nuxt
 import type { NuxtModule } from '@nuxt/schema'
 
 export interface ModuleOptions {
-  /** Registers `fields`, the `add*` helpers and the catalog composables. */
+  /** Registers `refFields`, the `add*` helpers and the catalog composables. */
   autoImports: boolean
   /** Directory scanned for domains, relative to srcDir. */
   domainsDir: string

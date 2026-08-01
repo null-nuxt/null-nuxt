@@ -681,3 +681,64 @@ describe('only declared choices are choices', () => {
     expect(form.options.value.profile.map(o => o.value)).toEqual(['adv'])
   })
 })
+
+describe('dispose', () => {
+  /**
+   * The README says it stops the effects, and nothing was checking that. A
+   * disposed form whose rules still ran would keep clearing and autofilling
+   * behind a component that is already gone.
+   */
+  const withEffects = () => {
+    const spy = vi.fn()
+    const f = refFields({
+      trigger: { label: 'Trigger', value: '' },
+      target: { label: 'Target', value: 'intact' },
+    })
+
+    addRules(f, {
+      trigger: { onChange: value => spy(value) },
+      target: { canShow: () => f.trigger.value !== 'hide', clearWhenHidden: true },
+    })
+
+    return { fields: f, spy }
+  }
+
+  it('stops onChange', async () => {
+    const { fields, spy } = withEffects()
+    const form = toForm(fields)
+
+    fields.trigger.value = 'first'
+    await nextTick()
+    expect(spy).toHaveBeenCalledOnce()
+
+    form.dispose()
+
+    fields.trigger.value = 'second'
+    await nextTick()
+    expect(spy).toHaveBeenCalledOnce()
+  })
+
+  it('stops clearWhenHidden', async () => {
+    const { fields } = withEffects()
+    const form = toForm(fields)
+
+    form.dispose()
+
+    fields.trigger.value = 'hide'
+    await nextTick()
+
+    expect(fields.target.value).toBe('intact')
+  })
+
+  /** Releasing the claim is what lets the same fields drive a form again. */
+  it('releases the fields, so they can drive another form', () => {
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { fields } = withEffects()
+
+    toForm(fields).dispose()
+    toForm(fields)
+
+    expect(warnings).not.toHaveBeenCalled()
+    warnings.mockRestore()
+  })
+})

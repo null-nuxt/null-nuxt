@@ -434,6 +434,8 @@ helps nobody.
 | `register()` on a field that doesn't exist | **compile time** |
 | `register()` reading an extra the field never declared | **compile time** |
 | an option whose value doesn't match the field's | **compile time** |
+| `deriveOptions` on a field that declared no options | **compile time** |
+| reading `options`/`selected` on a field that isn't a choice | **compile time** |
 | `useFormDomain('unknown-slug')` | **compile time** |
 | the payload reading a key it doesn't project | **compile time** |
 | `ctx.patch()` with a field that doesn't exist | ignored at runtime |
