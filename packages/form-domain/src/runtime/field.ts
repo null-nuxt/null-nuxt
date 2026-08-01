@@ -30,7 +30,7 @@ export interface FieldRule<TValue, TValues> {
  * registration functions write into.
  *
  * `key` is filled at assembly, not here: a field doesn't know its own name
- * until it is put into a form, and `field()` has to work for a field declared
+ * until it is put into a form, and `refField()` has to work for a field declared
  * on its own to be reused across domains.
  */
 export interface FieldObj<TValue, TValues = Record<string, unknown>, TDeclared = FieldInput<TValue>> {
@@ -102,15 +102,19 @@ const createField = <TValue>(input: FieldInput<TValue>): FieldObj<TValue> => {
 
 /**
  * One field, on its own. Use it for a field worth reusing across domains — a
- * CPF with its mask and its list — and hand it to `fields()` alongside the
+ * CPF with its mask and its list — and hand it to `refFields()` alongside the
  * plain declarations.
+ *
+ * `ref` rather than `use`: this creates reactive state, the way `ref()` does,
+ * which is exactly why calling it at module scope is suspect. `use` would say
+ * "composable", which it isn't — and vee-validate already owns `useField`.
  *
  * The parameter is `TInput & { value: TValue }` rather than plain `TInput` so
  * `TValue` gets its own inference site. Inferred from the constraint alone it
  * would collect a candidate from the options too and widen, silently dropping
  * the guarantee that an option's value matches the field's.
  */
-export const field = <TValue, TInput extends FieldInput<TValue> = FieldInput<TValue>>(
+export const refField = <TValue, TInput extends FieldInput<TValue> = FieldInput<TValue>>(
   input: TInput & { value: TValue },
 ): FieldObj<TInput['value'], Record<string, unknown>, TInput> =>
   createField(input) as FieldObj<TInput['value'], Record<string, unknown>, TInput>
@@ -139,10 +143,10 @@ export type BuiltFields<T extends FieldsInput> = {
  * The form's fields, named. This is where a field learns its own key, so the
  * template never repeats the name next to the field.
  *
- * Accepts a declaration or an already-built `field()`, so a shared field drops
+ * Accepts a declaration or an already-built `refField()`, so a shared field drops
  * in next to inline ones.
  */
-export const fields = <T extends FieldsInput>(input: T): BuiltFields<T> => {
+export const refFields = <T extends FieldsInput>(input: T): BuiltFields<T> => {
   const result: Record<string, unknown> = {}
 
   for (const [key, source] of Object.entries(input)) {

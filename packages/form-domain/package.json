@@ -1,6 +1,6 @@
 {
   "name": "@null-nuxt/form-domain",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Formulário declarado como setup — campos, regras, validação e payload — consumido por composables, no estilo defineStore.",
   "license": "MIT",
   "homepage": "https://github.com/null-nuxt/null-nuxt/tree/main/packages/form-domain#readme",

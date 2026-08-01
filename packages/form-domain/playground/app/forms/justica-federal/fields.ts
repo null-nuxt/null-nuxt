@@ -1,15 +1,15 @@
-import { fields } from '#forms'
+import { refFields } from '#forms'
 
 export type Pessoa = 'PF' | 'PJ' | ''
 
 /**
  * Os campos, num lugar só: é deles que sai o tipo que as seções importam.
  *
- * Uma fábrica, não um valor de módulo — chamar `fields()` no topo do módulo
+ * Uma fábrica, não um valor de módulo — chamar `refFields()` no topo do módulo
  * criaria estado compartilhado entre requests, que é o mesmo furo de um `ref()`
  * solto no topo de um arquivo.
  */
-export const createFields = () => fields({
+export const createFields = () => refFields({
   tipoPessoa: { label: 'Tipo de Pessoa', value: '' as Pessoa },
   cpf: { label: 'CPF', value: '', mask: 'cpf' },
   cnpj: { label: 'CNPJ', value: '', mask: 'cnpj' },

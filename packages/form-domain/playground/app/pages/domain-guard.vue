@@ -7,7 +7,7 @@ import { object, string } from 'yup'
  * uma deixar de valer, a diretiva fica sem uso e o typecheck falha.
  */
 
-const campos = fields({
+const campos = refFields({
   username: { label: 'Username', value: '' },
   tipo: { label: 'Tipo', value: '' as 'PF' | 'PJ' | '' },
   perfil: {
@@ -30,7 +30,7 @@ addSchemas(campos, { username: string().required() })
 // @ts-expect-error validar campo que não existe não faz sentido
 addSchemas(campos, { sobrenome: string().required() })
 
-const form = useForm(campos)
+const form = toForm(campos)
 
 /** O valor mantém a união declarada, atravessando `values`. */
 const tipo: 'PF' | 'PJ' | '' = form.values.value.tipo
@@ -64,8 +64,8 @@ void parcial
 void completo
 
 /** Campo avulso entra ao lado das declarações e mantém a precisão. */
-const cpfCompartilhado = field({ label: 'CPF', value: '', mask: 'cpf' })
-const comAvulso = useForm(fields({ cpf: cpfCompartilhado, nome: { label: 'Nome', value: '' } }))
+const cpfCompartilhado = refField({ label: 'CPF', value: '', mask: 'cpf' })
+const comAvulso = toForm(refFields({ cpf: cpfCompartilhado, nome: { label: 'Nome', value: '' } }))
 
 void comAvulso.register('cpf').mask
 
@@ -74,7 +74,7 @@ void comAvulso.register('cpf').placeholder
 
 /** Domínio: metadata sai da factory, sem instanciar. */
 const domain = defineFormDomain('domain-guard', { title: 'Guarda', order: 1 }, () => {
-  const f = fields({ nome: { label: 'Nome', value: '' } })
+  const f = refFields({ nome: { label: 'Nome', value: '' } })
   return { fields: f, gritado: computed(() => f.nome.value.toUpperCase()) }
 }).payload(ctx => ({ ...ctx.visible, gritado: ctx.gritado.value }))
 
@@ -96,7 +96,7 @@ void instancia.payload.value.naoExiste
 
 /** Metadata é opcional. */
 const semMeta = defineFormDomain('domain-guard-sem-meta', () => ({
-  fields: fields({ nome: { label: 'Nome', value: '' } }),
+  fields: refFields({ nome: { label: 'Nome', value: '' } }),
 }))
 
 const nome: string = semMeta().values.value.nome

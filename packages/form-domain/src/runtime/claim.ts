@@ -3,7 +3,7 @@
  * process, so on the server the second request drives the same objects the
  * first one filled in — one user's data showing up in another's form.
  *
- * The types can't see this: whether `fields()` runs at module scope or inside a
+ * The types can't see this: whether `refFields()` runs at module scope or inside a
  * factory is not something a signature can express. So it is caught at runtime,
  * and caught on the condition that IS the bug rather than on a proxy for it.
  *
@@ -34,7 +34,7 @@ export function claimFields(fields: object): void {
       '[@null-nuxt/form-domain] these fields already drive another form. '
       + 'Fields declared at module scope are created once per process, so under SSR '
       + 'the next request reuses the state the previous one filled in. '
-      + 'Wrap them in a factory — `const createFields = () => fields({ ... })` — '
+      + 'Wrap them in a factory — `const createFields = () => refFields({ ... })` — '
       + 'and call it inside the setup, or inside the component.',
     )
     return

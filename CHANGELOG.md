@@ -5,13 +5,36 @@ All notable changes to this project are documented here. The format follows
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 independently.
 
-Each package is tagged on its own — `form-domain@0.3.0`, `tracking@0.1.0` —
+Each package is tagged on its own — `form-domain@0.4.0`, `tracking@0.1.0` —
 because they are installed and pinned separately. The repo-wide `v0.1.0` tag
 predates that and is kept only so existing pins keep resolving.
 
 ## [Unreleased]
 
 Nothing yet.
+
+## `@null-nuxt/form-domain` 0.4.0 — 2026-08-01
+
+Renames only. No behaviour changed.
+
+### Changed
+
+- **`fields` is `refFields`, and `field` is `refField`.** They create reactive
+  state the way `ref()` does, which is exactly why calling them at module scope
+  is a mistake — the prefix carries a warning the bare name couldn't. `use*` was
+  the obvious alternative and is wrong twice over: it claims "composable", which
+  these aren't, and `useField` is already vee-validate's.
+
+- **`useForm` is `toForm`.** vee-validate exports `useForm`, and most projects
+  reaching for this package have vee-validate too — so the old name collided
+  head-on with an import the same file was likely to hold. `to*` follows Vue's
+  own sense of deriving one shape from another, as in `toRefs`. `createForm`
+  was considered and dropped: in this package `create*` used to mean a builder
+  you had to terminate.
+
+The README now also says outright that the `useForm({ validationSchema })` in
+the validation section is **vee-validate's**, not this package's. That
+ambiguity was in the 0.3.0 docs and is what surfaced the collision.
 
 ## `@null-nuxt/form-domain` 0.3.0 — 2026-08-01
 
@@ -226,5 +249,5 @@ it is listed under `Added` rather than split across change types.
   helpers, which extract the context from a partial builder and avoid a
   circular import.
 
-[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.3.0...HEAD
+[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.4.0...HEAD
 [0.1.0]: https://github.com/null-nuxt/null-nuxt/releases/tag/v0.1.0

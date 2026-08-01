@@ -7,7 +7,7 @@ import { string } from 'yup'
  * o `<script setup>` já é o escopo, então os campos são consts, o derivado é um
  * `computed`, e o formulário só é montado no fim.
  */
-const campos = fields({
+const campos = refFields({
   name: { label: 'Nome Completo*', value: '', placeholder: 'Digite seu nome completo' },
   email: { label: 'E-mail*', value: '', placeholder: 'voce@exemplo.com.br' },
   type: {
@@ -42,7 +42,7 @@ addSchemas(campos, {
  * template desembrulha sozinho. Guardar o objeto inteiro obrigaria a escrever
  * `form.canShow.value.cpf` até no `v-if`.
  */
-const { register, canShow, values, validate } = useForm(campos)
+const { register, canShow, values, validate } = toForm(campos)
 
 /**
  * O submit é da lib de formulário do projeto (vee-validate, FormKit...), não

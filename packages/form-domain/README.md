@@ -10,7 +10,7 @@ yup 1.7+.
 ## Installation
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#form-domain@0.3.0&path:/packages/form-domain"
+pnpm add "github:null-nuxt/null-nuxt#form-domain@0.4.0&path:/packages/form-domain"
 ```
 
 Each package is tagged on its own, since they are versioned and pinned
@@ -45,7 +45,7 @@ at the end:
 <script setup lang="ts">
 import { object, string } from 'yup'
 
-const campos = fields({
+const campos = refFields({
   name: { label: 'Full name', value: '' },
   personType: {
     label: 'Type',
@@ -68,7 +68,7 @@ addSchemas(campos, {
   ein: string().required(),
 })
 
-const { register, canShow, values, composeSchema } = useForm(campos)
+const { register, canShow, values, composeSchema } = toForm(campos)
 const schema = composeSchema(object)
 </script>
 
@@ -130,6 +130,30 @@ A setup has no literal. Each line is a declaration and inference runs top to
 bottom, so the limitation is gone rather than worked around — and with it the
 eight type parameters, the `RulesOf`/`SchemaOf`/`OutcomeOf` helpers a consuming
 project had to import, and a whole class of ordering mistakes.
+
+## The names, and what each prefix promises
+
+Every prefix already means something in Vue, so the name teaches rather than
+labels:
+
+| prefix | in Vue | here |
+|---|---|---|
+| `ref*` | creates reactive state | `refField`, `refFields` |
+| `to*` | derives one shape from another | `toForm` |
+| `define*` | declares a thing to use later | `defineFormDomain` |
+| `use*` | consumes a declared thing, in a component | `useFormDomain`, `useFormDomains` |
+
+`refFields` rather than `useFields` for two reasons. It creates reactive state
+the way `ref()` does — which is exactly why calling it at module scope is
+suspect — whereas `use` would claim it's a composable, which it isn't. And
+`useField` is already vee-validate's, an import most projects using this will
+also have.
+
+`toForm` rather than `createForm` because `create*` in this package used to mean
+a builder you had to terminate, and because `useForm` is vee-validate's too.
+
+`add*` sits outside the table on purpose: registration is neither creation nor
+derivation, and `add` says so without borrowing anyone's meaning.
 
 ## Registration takes its target
 
@@ -308,7 +332,7 @@ process — so the second request drives the objects the first one filled in.
 Wrap them in a factory:
 
 ```ts
-export const createFields = () => fields({ /* ... */ })
+export const createFields = () => refFields({ /* ... */ })
 export type Campos = ReturnType<typeof createFields>
 ```
 
@@ -333,15 +357,15 @@ helps nobody.
 ## API
 
 ```ts
-field({ label, value })        // one field, reusable across domains
-fields({ name: { ... } })      // the form's fields, named
+refField({ label, value })        // one field, reusable across domains
+refFields({ name: { ... } })      // the form's fields, named
 
 addRule(field, rule)           // behaviour for one field
 addRules(fields, { ... })      // for several, keyed
 addSchema(field, validator)    // validation for one
 addSchemas(fields, { ... })    // for several
 
-useForm(fields)                      // assemble inside a component
+toForm(fields)                       // assemble inside a component
 defineFormDomain(id, meta?, setup)   // a shared domain
   .payload(ctx => ({ ... }))         // optional projection
 ```

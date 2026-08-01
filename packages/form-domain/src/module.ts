@@ -84,13 +84,13 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
 
     if (options.autoImports) {
       addImports([
-        { name: 'field', from: resolver.resolve('./runtime/field') },
-        { name: 'fields', from: resolver.resolve('./runtime/field') },
+        { name: 'refField', from: resolver.resolve('./runtime/field') },
+        { name: 'refFields', from: resolver.resolve('./runtime/field') },
         { name: 'addRule', from: resolver.resolve('./runtime/register') },
         { name: 'addRules', from: resolver.resolve('./runtime/register') },
         { name: 'addSchema', from: resolver.resolve('./runtime/register') },
         { name: 'addSchemas', from: resolver.resolve('./runtime/register') },
-        { name: 'useForm', from: resolver.resolve('./runtime/define') },
+        { name: 'toForm', from: resolver.resolve('./runtime/define') },
         { name: 'defineFormDomain', from: resolver.resolve('./runtime/define') },
         { name: 'useFormDomain', from: resolver.resolve('./runtime/catalog') },
         { name: 'useFormDomains', from: resolver.resolve('./runtime/catalog') },

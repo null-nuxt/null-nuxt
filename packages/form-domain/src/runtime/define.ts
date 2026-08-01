@@ -8,8 +8,12 @@ import type { AnyFields, Exposed, FormEngine, SetupResult, ValuesOf } from './ty
  * A form assembled inside a component. The component's own `setup` is already
  * the scope, so there is no wrapper to write: declare the fields, attach the
  * rules, hand them over.
+ *
+ * `to` in the sense Vue uses it — `toRefs`, `toValue` — deriving one shape from
+ * another. Not `create`, which in this package used to mean a builder you had
+ * to terminate; and not `useForm`, which vee-validate already exports.
  */
-export function useForm<F extends AnyFields>(fields: F): FormEngine<F> {
+export function toForm<F extends AnyFields>(fields: F): FormEngine<F> {
   const scope = effectScope(true)
   const engine = scope.run(() => createEngine(fields))!
 
