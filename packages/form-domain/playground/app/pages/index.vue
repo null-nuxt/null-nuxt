@@ -54,6 +54,9 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
       <small style="opacity:.6"> options e validação saem da mesma lista</small>
     </label>
 
+    <!-- as duas camadas lado a lado: o campo como unidade... -->
+    <FieldUnit :field="campos.observacao" />
+
     <FormEcho />
 
     <div style="display:grid; gap:.4rem; background:#f4f4f5; padding:.8rem; border-radius:.4rem; font-size:.82rem">

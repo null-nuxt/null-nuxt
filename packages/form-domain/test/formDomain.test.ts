@@ -598,3 +598,44 @@ describe('selected no engine', () => {
     expect(form.payload.value.regiao_descricao).toBe('1ª Região')
   })
 })
+
+describe('declaração inerte no topo do módulo', () => {
+  /**
+   * O jeito seguro de tirar os campos do arquivo do domínio: exportar a
+   * DECLARAÇÃO, não os campos construídos. Dado puro não é estado reativo,
+   * então não há o que vazar entre requests — o furo deixa de existir em vez de
+   * ser avisado pela guarda.
+   */
+  const declaracao = {
+    tipoPessoa: { label: 'Tipo', value: '' as Pessoa },
+    perfil: { label: 'Perfil', value: '', options: [{ label: 'Adv', value: 'adv' }] },
+  }
+
+  it('a mesma declaração alimenta formulários independentes, sem aviso', () => {
+    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const primeiro = toForm(refFields(declaracao))
+    const segundo = toForm(refFields(declaracao))
+
+    primeiro.set({ tipoPessoa: 'PF' })
+
+    expect(segundo.values.value.tipoPessoa).toBe('')
+    expect(avisos).not.toHaveBeenCalled()
+
+    avisos.mockRestore()
+  })
+
+  it('a união declarada sobrevive à ida e volta pela const', () => {
+    const form = toForm(refFields(declaracao))
+
+    form.set({ tipoPessoa: 'PJ' })
+    const tipo: Pessoa = form.values.value.tipoPessoa
+
+    expect(tipo).toBe('PJ')
+  })
+
+  it('as options declaradas chegam no register', () => {
+    const form = toForm(refFields(declaracao))
+    expect(form.register('perfil').options?.map(o => o.value)).toEqual(['adv'])
+  })
+})

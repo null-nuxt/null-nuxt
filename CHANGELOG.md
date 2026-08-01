@@ -28,6 +28,20 @@ predates that and is kept only so existing pins keep resolving.
 
 ### `@null-nuxt/form-domain` — Added
 
+- **Fields in their own file are now an inert declaration**, not a factory.
+  What sits at module scope is plain data, so there is no reactive state to
+  leak between requests — the mistake stops existing rather than being detected
+  after the fact. `refFields(declaracao)` runs inside the setup, and the
+  guarantees stay in the constructor. The factory still works and is documented
+  as the older way.
+
+- **The two ways in are documented.** The engine (`values`, `register`,
+  `canShow`, `selected`, `options`) answers collection questions; `fields.cpf`
+  is the unit you hand to a component with its own contract. They are not
+  redundant, and the confusion was never that both exist — it was that nothing
+  said which was for what. A playground component takes a field, so the second
+  contract is typechecked rather than only described.
+
 - **`form.selected`**, the chosen option per field, back on the engine.
   Reaching it was the only reason a consumer needed the raw field objects, so
   `form.values.x` and `form.fields.x.value` were two ways to the same value with

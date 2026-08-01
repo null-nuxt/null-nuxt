@@ -1,20 +1,25 @@
-import { refFields } from '#forms'
+import type { BuiltFields } from '#forms'
 
 export type Pessoa = 'PF' | 'PJ' | ''
 
 /**
- * Os campos, num lugar só: é deles que sai o tipo que as seções importam.
+ * A DECLARAÇÃO dos campos — dado puro, não estado.
  *
- * Uma fábrica, não um valor de módulo — chamar `refFields()` no topo do módulo
- * criaria estado compartilhado entre requests, que é o mesmo furo de um `ref()`
- * solto no topo de um arquivo.
+ * É por isso que ela pode viver no topo do módulo: `refFields()` aqui criaria
+ * estado reativo compartilhado entre requests, e sob SSR a segunda request
+ * dirigiria o que a primeira preencheu. Um objeto inerte não tem o que vazar,
+ * então o modo de falha não existe em vez de ser avisado.
+ *
+ * A construção acontece dentro do setup, em `index.ts`. A garantia continua no
+ * construtor: `refFields` recusa option cujo valor não bate com o do campo.
  */
-export const createFields = () => refFields({
+export const declaracao = {
   tipoPessoa: { label: 'Tipo de Pessoa', value: '' as Pessoa },
   cpf: { label: 'CPF', value: '', mask: 'cpf' },
   cnpj: { label: 'CNPJ', value: '', mask: 'cnpj' },
   regiao: { label: 'Região', value: '' },
   observacao: { label: 'Observação', value: '' },
-})
+}
 
-export type Campos = ReturnType<typeof createFields>
+/** O tipo que as seções recebem, derivado da declaração. */
+export type Campos = BuiltFields<typeof declaracao>

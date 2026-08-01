@@ -310,6 +310,32 @@ cost 300 property reads, not 300 setups.
 
 `x.ts` and `x/index.ts` are the same domain; if both exist, the directory wins.
 
+## Two ways in, and which is for what
+
+The engine and the field objects both reach the same state. They are not
+redundant — they answer different questions, and mixing them up is the only
+confusion here:
+
+| you want | use |
+|---|---|
+| a collection, binding, validation | the engine: `values`, `register`, `canShow`, `selected`, `options` |
+| one field, passed somewhere | `fields.cpf` |
+
+```vue
+<!-- the standard input contract: the engine builds the props -->
+<MyInput v-bind="form.register('cpf')" />
+
+<!-- your own contract: the component takes the field -->
+<MyField :field="form.fields.cpf" />
+```
+
+A component that takes the field reads `label`, `value` and `selected` off it
+and writes to `value`. `register()` doesn't replace that — it serves one
+specific input shape.
+
+Inside a setup, read the field off the const you declared. From outside, prefer
+the engine, and reach for `fields` when you want the unit.
+
 ## Scaling up
 
 Up to around eight fields, one file. Above that, split by **section** rather
@@ -334,16 +360,34 @@ share. What crosses a file boundary is `Campos = ReturnType<typeof createFields>
 Fields are reactive state, and declared at module scope they are built once per
 process — so the second request drives the objects the first one filled in.
 
-Wrap them in a factory:
+So when the fields live in their own file, export the **declaration** rather
+than the built fields:
 
 ```ts
-export const createFields = () => refFields({ /* ... */ })
-export type Campos = ReturnType<typeof createFields>
+// fields.ts — plain data, safe at module scope
+export const declaracao = {
+  tipoPessoa: { label: 'Type', value: '' as Pessoa },
+  cpf: { label: 'CPF', value: '', mask: 'cpf' },
+}
+
+export type Campos = BuiltFields<typeof declaracao>
+
+// index.ts — built inside the setup, once per request
+const campos = refFields(declaracao)
 ```
 
-The types can't see this, so it is caught at runtime: one fields object driving
-two forms logs a warning naming the cause. It is a warning and not a throw
-because by then the app is serving, and turning a data leak into a blank page
+What sits at module scope is an inert object. There is no reactive state, so
+there is nothing to leak — the failure stops existing rather than being
+detected. The guarantees stay in the constructor: `refFields` still rejects an
+option whose value doesn't match its field's.
+
+A factory (`const createFields = () => refFields({ ... })`) works too and was
+the previous advice. The declaration is better because it removes the mistake
+instead of wrapping it.
+
+The types can't see any of this, so it is also caught at runtime: one fields
+object driving two forms logs a warning naming the cause. A warning and not a
+throw — by then the app is serving, and turning a data leak into a blank page
 helps nobody.
 
 ## What the compiler guarantees

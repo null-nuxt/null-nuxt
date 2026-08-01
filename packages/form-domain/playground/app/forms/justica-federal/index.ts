@@ -1,6 +1,6 @@
 import { computed } from 'vue'
-import { defineFormDomain } from '#forms'
-import { createFields } from './fields'
+import { defineFormDomain, refFields } from '#forms'
+import { declaracao } from './fields'
 import { documento } from './secoes/documento'
 import { regiao } from './secoes/regiao'
 
@@ -23,7 +23,7 @@ export const metadata = {
  * não posição numa cadeia.
  */
 export default defineFormDomain('justica-federal', metadata, () => {
-  const campos = createFields()
+  const campos = refFields(declaracao)
 
   documento(campos)
   regiao(campos)
