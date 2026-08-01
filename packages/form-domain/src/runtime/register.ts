@@ -38,17 +38,17 @@ export function addRule<TValue, TValues>(
  * the same check still fires, but the error lands on the whole function.
  */
 /**
- * The rule a given field accepts. `options` is only among them when the field
- * declared `options` in the first place — deriving a list for something that
+ * The rule a given field accepts. `deriveOptions` is only among them when the
+ * field declared `options` in the first place — deriving a list for something that
  * never said it was a select is a mistake the types can catch, and requiring the
  * declaration is also what lets `form.options` and `form.selected` be keyed by
  * the fields that can hold a choice.
  */
 export type RuleFor<F extends AnyFields, K extends keyof F> =
-  Omit<FieldRule<F[K]['value'], ValuesOf<F>>, 'options'>
+  Omit<FieldRule<F[K]['value'], ValuesOf<F>>, 'deriveOptions'>
   & (HasOptions<F, K> extends true
-    ? { options?: () => ReadonlyArray<FieldOption<F[K]['value']>> }
-    : { options?: never })
+    ? { deriveOptions?: () => ReadonlyArray<FieldOption<F[K]['value']>> }
+    : { deriveOptions?: never })
 
 export function addRules<F extends AnyFields, R>(
   fields: F,

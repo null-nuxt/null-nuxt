@@ -78,12 +78,22 @@ const withChoice = refFields({
 })
 
 addRules(withChoice, {
-  city: { options: () => withChoice.state.value ? [{ label: 'Recife', value: 'recife' }] : [] },
+  city: { deriveOptions: () => withChoice.state.value ? [{ label: 'Recife', value: 'recife' }] : [] },
 })
 
 addRules(withChoice, {
   // @ts-expect-error `state` never said it holds a choice, so it gets no options
-  state: { options: () => [] },
+  state: { deriveOptions: () => [] },
+})
+
+/**
+ * The name differs from the declaration's `options` because the SHAPES differ:
+ * an array there, a function here. Sharing the name would invite writing the
+ * array form in a rule and finding out from a type error.
+ */
+addRules(withChoice, {
+  // @ts-expect-error the derived list is a function, not an array
+  city: { deriveOptions: [{ label: 'Recife', value: 'recife' }] },
 })
 
 /** `selected` comes off the engine, with no need for the raw fields. */

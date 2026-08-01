@@ -21,7 +21,15 @@ export interface FieldInput<TValue> {
 export interface FieldRule<TValue, TValues> {
   canShow?: () => boolean
   clearWhenHidden?: boolean
-  options?: () => ReadonlyArray<FieldOption<TValue>>
+  /**
+   * The derived list, which wins over the one declared on the field.
+   *
+   * Named apart from the declaration's `options` because the shapes differ —
+   * there an array, here a function returning one. The same name on both would
+   * invite writing `options: [{ label, value }]` in a rule and finding out from
+   * a type error.
+   */
+  deriveOptions?: () => ReadonlyArray<FieldOption<TValue>>
   onChange?: (value: TValue, ctx: { patch: (values: Partial<TValues>) => void }) => void | Promise<void>
 }
 
@@ -91,7 +99,7 @@ const createField = <TValue>(input: FieldInput<TValue>): FieldObj<TValue> => {
      * are tracked.
      */
     get selected(): FieldOption<TValue> | undefined {
-      const list = this.rule?.options ? this.rule.options() : this.declaredOptions
+      const list = this.rule?.deriveOptions ? this.rule.deriveOptions() : this.declaredOptions
       return list?.find(option => option.value === this.value)
     },
     __isFormField: true,

@@ -15,7 +15,7 @@ export function region(fields: Fields) {
     region: {
       // with no type chosen there is no region that makes sense
       canShow: () => fields.personType.value !== '',
-      options: () => regionsFor(fields),
+      deriveOptions: () => regionsFor(fields),
     },
   })
 

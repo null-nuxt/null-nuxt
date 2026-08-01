@@ -58,7 +58,7 @@ export function createEngine<F extends AnyFields>(fields: F): FormEngine<F> {
     for (const key of optionKeys) {
       const target = fields[key]!
       // the rule wins over the list declared on the field
-      result[key] = target.rule?.options ? target.rule.options() : (target.declaredOptions ?? [])
+      result[key] = target.rule?.deriveOptions ? target.rule.deriveOptions() : (target.declaredOptions ?? [])
     }
     return result as { [K in keyof F]: ReadonlyArray<FieldOption<F[K]['value']>> }
   })

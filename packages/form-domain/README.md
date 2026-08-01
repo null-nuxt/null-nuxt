@@ -177,7 +177,7 @@ the whole function instead of the offending key.
 |---|---|
 | `canShow` | hides the field, and drops it from validation |
 | `clearWhenHidden` | resets it to its initial value once hidden |
-| `options` | a derived list; wins over the one declared on the field, and only for a field that declared one |
+| `deriveOptions` | a derived list; wins over the one declared on the field, and only for a field that declared one |
 | `onChange` | a side effect, writing through `ctx.patch()` |
 
 `canShow` returning false removes the field from validation. That's what erases
@@ -266,14 +266,21 @@ refFields({
 ```
 
 That marker does two things. It lets a rule derive the list — `addRules` rejects
-`options` on a field that never declared any — and it keys `form.options` and
-`form.selected` to the fields that can actually hold one:
+`deriveOptions` on a field that never declared any — and it keys `form.options`
+and `form.selected` to the fields that can actually hold one:
 
 ```ts
+addRules(fields, { city: { deriveOptions: () => regionsFor(fields) } })
+
 form.options.city      // ok
 form.selected.city     // ok
 form.options.name      // ✗ this field is not a choice
 ```
+
+The rule's key is `deriveOptions`, not `options`, because the shapes differ: an
+array in the declaration, a function returning one in the rule. Sharing the name
+would invite writing the array form in a rule and learning otherwise from a type
+error.
 
 Without it both would have to list every field, typing a plain text input as
 though a choice might land in it.

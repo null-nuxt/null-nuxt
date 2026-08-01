@@ -27,6 +27,12 @@ predates that and is kept only so existing pins keep resolving.
   Breaking for a field that took its options only from a rule — add
   `options: []` to its declaration.
 
+- **A rule derives a list with `deriveOptions`, not `options`.** The two shapes
+  differ — an array in the declaration, a function returning one in the rule —
+  and sharing the name invited writing the array form in a rule and learning
+  otherwise from a type error. The verb also stops the key reading as a setting
+  of `addRules` itself, which is what the other rule keys are not.
+
 ### `@null-nuxt/form-domain` — Fixed
 
 - **`refFields` checks an option's value against its own field again.** The
@@ -282,6 +288,12 @@ it is listed under `Added` rather than split across change types.
 
   Breaking for a field that took its options only from a rule — add
   `options: []` to its declaration.
+
+- **A rule derives a list with `deriveOptions`, not `options`.** The two shapes
+  differ — an array in the declaration, a function returning one in the rule —
+  and sharing the name invited writing the array form in a rule and learning
+  otherwise from a type error. The verb also stops the key reading as a setting
+  of `addRules` itself, which is what the other rule keys are not.
 
 ### `@null-nuxt/form-domain` — Fixed
 

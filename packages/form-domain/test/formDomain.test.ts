@@ -21,7 +21,7 @@ const build = () => {
     cpf: { canShow: () => f.personType.value === 'PF', clearWhenHidden: true },
     cnpj: { canShow: () => f.personType.value === 'PJ', clearWhenHidden: true },
     region: {
-      options: () => f.personType.value === 'PF'
+      deriveOptions: () => f.personType.value === 'PF'
         ? [{ label: '1st Region', value: 'first' }]
         : [{ label: 'Only', value: 'only' }],
     },
@@ -656,7 +656,7 @@ describe('only declared choices are choices', () => {
       city: { label: 'City', value: '', options: [] as { label: string, value: string }[] },
     })
 
-    addRules(f, { city: { options: () => [{ label: 'Recife', value: 'recife' }] } })
+    addRules(f, { city: { deriveOptions: () => [{ label: 'Recife', value: 'recife' }] } })
 
     return f
   }
