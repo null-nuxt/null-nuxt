@@ -168,7 +168,7 @@ export interface FormDomainInstance<F extends FieldsDef, C, M, Id extends string
   /** Derived business rules, shared by rules, schema and meta. */
   computed: ComputedRef<C>
   canShow: ComputedRef<{ [K in keyof F]: boolean }>
-  /** Options efetivas: as de `rules` vencem as declaradas em `fields`. */
+  /** Effective options: the ones from `rules` beat the ones declared in `fields`. */
   options: ComputedRef<{ [K in keyof F]: ReadonlyArray<FieldOption<F[K]['value']>> }>
   /** The selected option per field — where the friendly text comes from. */
   selected: ComputedRef<SelectedOptions<F>>
@@ -184,7 +184,7 @@ export interface FormDomainInstance<F extends FieldsDef, C, M, Id extends string
   set: (patch: Partial<FormValues<F>>) => void
   reset: () => void
   dispose: () => void
-  /** Props prontas pro input: `<Input v-bind="form.register('email')" />`. */
+  /** Ready-made input props: `<Input v-bind="form.register('email')" />`. */
   register: <K extends keyof F & string>(key: K) => FieldBindings<F[K]['value']>
 }
 

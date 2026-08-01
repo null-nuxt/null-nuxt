@@ -183,9 +183,9 @@ function createInstance(definition: Definition) {
             return
           }
 
-          const mensagens = result.issues.map(issue => issue.message)
-          errors[key] = mensagens
-          if (mensagens[0]) firstErrors[key] = mensagens[0]
+          const messages = result.issues.map(issue => issue.message)
+          errors[key] = messages
+          if (messages[0]) firstErrors[key] = messages[0]
         }),
       )
 
@@ -207,7 +207,7 @@ function createInstance(definition: Definition) {
       const onChange = definition.rules?.[key]?.onChange
       if (!onChange) continue
 
-      /** Descarta resposta obsoleta de um `onChange` async. */
+      /** Discards a stale response from an async `onChange`. */
       let latest = 0
 
       watch(
