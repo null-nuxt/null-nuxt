@@ -2,21 +2,21 @@
 import type { FieldObj } from '#forms'
 
 /**
- * A segunda camada, em código: um componente que recebe O CAMPO em vez das
- * props que `register()` monta.
+ * The second layer, in code: a component that takes THE FIELD rather than the
+ * props `register()` builds.
  *
- * `register()` serve um contrato específico de input — name, label, modelValue,
- * handler. Quando o componente quer o próprio objeto, ele lê `label`, `value` e
- * `selected` direto e escreve em `value`. Coleção indexada não expressa isso,
- * e é por isso que `fields` continua na instância.
+ * `register()` serves one specific input contract — name, label, modelValue,
+ * handler. When a component wants the object itself, it reads `label`, `value`
+ * and `selected` off it and writes to `value`. A keyed collection can't express
+ * that, which is why `fields` stays on the instance.
  *
- * Fica no playground para a regra do README ser verificada pelo typecheck em
- * vez de viver só como parágrafo.
+ * It lives in the playground so the README's rule is checked by typecheck
+ * instead of only being described.
  *
- * O `v-model` no campo dispara `vue/no-mutating-props`, e a regra está certa no
- * caso geral. Aqui não: o campo é estado reativo compartilhado, como uma store
- * passada adiante, e escrever nele É o contrato. A regra não distingue os dois
- * casos, então a exceção fica marcada no template.
+ * The `v-model` here trips `vue/no-mutating-props`, and the rule is right in
+ * general. Not here: the field is shared reactive state, like a store passed
+ * down, and writing to it IS the contract. The rule can't tell the two apart,
+ * so the exception is marked at the line.
  */
 defineProps<{ field: FieldObj<string> }>()
 </script>
@@ -27,7 +27,7 @@ defineProps<{ field: FieldObj<string> }>()
     <!-- eslint-disable-next-line vue/no-mutating-props -->
     <input v-model="field.value">
     <small v-if="field.selected" style="opacity:.6">
-      escolhido: {{ field.selected.label }}
+      chosen: {{ field.selected.label }}
     </small>
   </label>
 </template>

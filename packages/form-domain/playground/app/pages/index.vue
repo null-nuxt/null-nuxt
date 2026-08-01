@@ -1,20 +1,20 @@
 <script setup lang="ts">
-const { fields: campos, canShow, options, values, payload, shape, reset, isPF, sku, price, resumo } = useFormDomain('justica-federal')
+const { fields, canShow, options, values, payload, shape, reset, isIndividual, sku, price, summary } = useFormDomain('federal-court')
 
-const camposNoSchema = computed(() => Object.keys(shape.value))
+const fieldsInSchema = computed(() => Object.keys(shape.value))
 </script>
 
 <template>
   <main style="font-family: system-ui; padding: 2rem; display: grid; gap: 1rem; max-width: 46rem">
     <h1>@null-nuxt/form-domain</h1>
     <p style="color:#52525b; font-size:.9rem">
-      Este domínio é um setup: os campos num arquivo, e cada bloco — documento,
-      região — dono da própria regra e da própria validação.
+      This domain is a setup: the fields in one file, and each block —
+      document, region — owning its own rule and its own validation.
     </p>
 
     <label>
-      {{ campos.tipoPessoa.label }}
-      <select v-model="campos.tipoPessoa.value">
+      {{ fields.personType.label }}
+      <select v-model="fields.personType.value">
         <option value="">
           —
         </option>
@@ -28,60 +28,60 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
     </label>
 
     <label v-if="canShow.cpf">
-      {{ campos.cpf.label }}
-      <input v-model="campos.cpf.value">
+      {{ fields.cpf.label }}
+      <input v-model="fields.cpf.value">
     </label>
 
     <label v-if="canShow.cnpj">
-      {{ campos.cnpj.label }}
-      <input v-model="campos.cnpj.value">
+      {{ fields.cnpj.label }}
+      <input v-model="fields.cnpj.value">
     </label>
 
-    <label v-if="canShow.regiao">
-      {{ campos.regiao.label }}
-      <select v-model="campos.regiao.value">
+    <label v-if="canShow.region">
+      {{ fields.region.label }}
+      <select v-model="fields.region.value">
         <option value="">
           —
         </option>
         <option
-          v-for="option in options.regiao"
+          v-for="option in options.region"
           :key="String(option.value)"
           :value="option.value"
         >
           {{ option.label }}
         </option>
       </select>
-      <small style="opacity:.6"> options e validação saem da mesma lista</small>
+      <small style="opacity:.6"> options and validation come from one list</small>
     </label>
 
-    <!-- as duas camadas lado a lado: o campo como unidade... -->
-    <FieldUnit :field="campos.observacao" />
+    <!-- the two layers side by side: the field as a unit... -->
+    <FieldUnit :field="fields.notes" />
 
     <FormEcho />
 
     <div style="display:grid; gap:.4rem; background:#f4f4f5; padding:.8rem; border-radius:.4rem; font-size:.82rem">
-      <div><strong>derivados</strong>: isPF={{ isPF }} · sku={{ sku }}</div>
-      <div><strong>preço</strong>: R$ {{ price.toFixed(2) }}</div>
+      <div><strong>derived</strong>: individual={{ isIndividual }} · sku={{ sku }}</div>
+      <div><strong>price</strong>: R$ {{ price.toFixed(2) }}</div>
       <div>
-        <strong>carrinho</strong>: {{ resumo }}
+        <strong>cart line</strong>: {{ summary }}
         <br>
         <small style="opacity:.6">
-          o campo guarda <code>{{ values.regiao || '—' }}</code>; o label vem
-          derivado, então acompanha se a lista mudar
+          the field stores <code>{{ values.region || '—' }}</code>; the label is
+          derived, so it follows if the list changes
         </small>
       </div>
       <div>
         <strong>payload</strong>: <code>{{ payload }}</code>
         <br>
         <small style="opacity:.6">
-          projeção do formulário: o texto da região entra aqui sem existir um
-          campo pra ele, e o documento escondido fica de fora
+          a projection of the form: the region's text lands here without a
+          field of its own, and the hidden document stays out
         </small>
       </div>
       <div>
-        <strong>schema valida</strong>: {{ camposNoSchema.join(', ') || '—' }}
+        <strong>schema valida</strong>: {{ fieldsInSchema.join(', ') || '—' }}
         <br>
-        <small style="opacity:.6">campo escondido sai do schema sozinho — nenhum <code>.when()</code> no arquivo</small>
+        <small style="opacity:.6">a hidden field leaves the schema on its own — no <code>.when()</code> in the file</small>
       </div>
     </div>
 

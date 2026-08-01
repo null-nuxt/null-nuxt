@@ -3,139 +3,139 @@ import { computed } from 'vue'
 import { object, string } from 'yup'
 
 /**
- * Fixture de tipos do domínio. Cada `@ts-expect-error` aqui é uma garantia: se
- * uma deixar de valer, a diretiva fica sem uso e o typecheck falha.
+ * Type fixture for the domain. Every `@ts-expect-error` here is a guarantee: if
+ * one stops holding, the directive goes unused and typecheck fails.
  */
 
-const campos = refFields({
+const declared = refFields({
   username: { label: 'Username', value: '' },
-  tipo: { label: 'Tipo', value: '' as 'PF' | 'PJ' | '' },
-  perfil: {
-    label: 'Perfil',
+  personType: { label: 'Type', value: '' as 'PF' | 'PJ' | '' },
+  profile: {
+    label: 'Profile',
     value: '',
-    placeholder: 'escolha um',
-    options: [{ label: 'Advogado', value: 'adv' }],
+    placeholder: 'pick one',
+    options: [{ label: 'Lawyer', value: 'adv' }],
   },
 })
 
-addRules(campos, {
-  username: { canShow: () => campos.tipo.value === 'PF', clearWhenHidden: true },
+addRules(declared, {
+  username: { canShow: () => declared.personType.value === 'PF', clearWhenHidden: true },
 })
 
-// @ts-expect-error campo que não existe em fields
-addRules(campos, { sobrenome: { canShow: () => true } })
+// @ts-expect-error a field that isn't in fields
+addRules(declared, { surname: { canShow: () => true } })
 
-addSchemas(campos, { username: string().required() })
+addSchemas(declared, { username: string().required() })
 
-// @ts-expect-error validar campo que não existe não faz sentido
-addSchemas(campos, { sobrenome: string().required() })
+// @ts-expect-error validating a field that doesn't exist makes no sense
+addSchemas(declared, { surname: string().required() })
 
-const form = toForm(campos)
+const form = toForm(declared)
 
-/** O valor mantém a união declarada, atravessando `values`. */
-const tipo: 'PF' | 'PJ' | '' = form.values.value.tipo
-void tipo
+/** The value keeps its declared union, all the way through `values`. */
+const personType: 'PF' | 'PJ' | '' = form.values.value.personType
+void personType
 
-// @ts-expect-error campo fora de fields
-form.register('sobrenome')
+// @ts-expect-error a field outside fields
+form.register('surname')
 
-/** Um campo que declara extras recebe as chaves... */
-void form.register('perfil').options
-void form.register('perfil').placeholder
+/** A field that declares extras gets the keys... */
+void form.register('profile').options
+void form.register('profile').placeholder
 
-// @ts-expect-error ...e um que não declara nenhum não recebe nada
+// @ts-expect-error ...and one that declares none gets nothing
 void form.register('username').options
 
-// @ts-expect-error idem para placeholder
+// @ts-expect-error same for placeholder
 void form.register('username').placeholder
 
-/** O handler tem que servir a um componente com `defineModel<string>()`. */
+/** The handler has to serve a component declaring `defineModel<string>()`. */
 const handler: (value: string | undefined) => void = form.register('username')['onUpdate:modelValue']
 void handler
 
-/** `shape` mantém o tipo do yup, então compõe. */
+/** `shape` keeps yup's own type, so it composes. */
 const schema = form.composeSchema(object)
 void schema.value.describe
 
-/** `selected` sai do engine, sem precisar dos campos crus. */
-const escolhido: string | undefined = form.selected.value.perfil?.label
-void escolhido
+/** `selected` comes off the engine, with no need for the raw fields. */
+const chosen: string | undefined = form.selected.value.profile?.label
+void chosen
 
-// @ts-expect-error campo fora de fields
-void form.selected.value.sobrenome
+// @ts-expect-error a field outside fields
+void form.selected.value.surname
 
-/** `visible` é parcial; `values` é completo. */
-const parcial: string | undefined = form.visible.value.username
-const completo: string = form.values.value.username
-void parcial
-void completo
+/** `visible` is partial; `values` is complete. */
+const partial: string | undefined = form.visible.value.username
+const complete: string = form.values.value.username
+void partial
+void complete
 
 /**
- * O valor de uma option tem que bater com o do campo que a carrega. Isso valia
- * pelo `refField()` singular e NÃO valia pelo `refFields()` — que é o caminho
- * comum — porque o record é chaveado com `any`. Sem esta garantia o select
- * renderiza escolhas que nunca casam: `selected` não resolve e um `oneOf`
- * recusa tudo que o usuário escolher.
+ * An option's value has to match the field carrying it. That held through
+ * `refField()` and NOT through `refFields()` — the common path — because the
+ * record is keyed with `any`. Without it the select renders choices that can
+ * never match: `selected` never resolves and a `oneOf` rejects everything the
+ * user picks.
  */
 refFields({
-  // @ts-expect-error o campo guarda string; esta option guarda number
-  quantidade: { label: 'Qtd', value: '', options: [{ label: 'Um', value: 1 }] },
+  // @ts-expect-error the field holds a string; this option holds a number
+  quantity: { label: 'Quantity', value: '', options: [{ label: 'One', value: 1 }] },
 })
 
 refFields({
-  quantidade: {
-    label: 'Qtd',
-    value: '' as 'um' | 'dois' | '',
-    // a união do campo aceita option da mesma união
-    options: [{ label: 'Um', value: 'um' as const }],
+  quantity: {
+    label: 'Quantity',
+    value: '' as 'one' | 'two' | '',
+    // the field's union accepts an option from the same union
+    options: [{ label: 'One', value: 'one' as const }],
   },
 })
 
-/** Campo avulso entra ao lado das declarações e mantém a precisão. */
-const cpfCompartilhado = refField({ label: 'CPF', value: '', mask: 'cpf' })
-const comAvulso = toForm(refFields({ cpf: cpfCompartilhado, nome: { label: 'Nome', value: '' } }))
+/** A standalone field sits next to the declarations and keeps its precision. */
+const sharedCpf = refField({ label: 'CPF', value: '', mask: 'cpf' })
+const withStandalone = toForm(refFields({ cpf: sharedCpf, name: { label: 'Name', value: '' } }))
 
-void comAvulso.register('cpf').mask
+void withStandalone.register('cpf').mask
 
-// @ts-expect-error o campo avulso não declarou placeholder
-void comAvulso.register('cpf').placeholder
+// @ts-expect-error the standalone field declared no placeholder
+void withStandalone.register('cpf').placeholder
 
-/** Domínio: metadata sai da factory, sem instanciar. */
+/** Domain: metadata comes off the factory, with no instance. */
 const domain = defineFormDomain('domain-guard', { title: 'Guarda', order: 1 }, () => {
-  const f = refFields({ nome: { label: 'Nome', value: '' } })
-  return { fields: f, gritado: computed(() => f.nome.value.toUpperCase()) }
-}).payload(ctx => ({ ...ctx.visible, gritado: ctx.gritado.value }))
+  const f = refFields({ name: { label: 'Name', value: '' } })
+  return { fields: f, shouted: computed(() => f.name.value.toUpperCase()) }
+}).payload(ctx => ({ ...ctx.visible, shouted: ctx.shouted.value }))
 
-const titulo: string = domain.metadata.title
-void titulo
+const title: string = domain.metadata.title
+void title
 
-const instancia = domain()
+const instance = domain()
 
-/** O que o setup expôs além dos campos chega tipado. */
-const gritado: string = instancia.gritado.value
-void gritado
+/** What the setup exposed beyond the fields arrives typed. */
+const shouted: string = instance.shouted.value
+void shouted
 
-/** E a projeção mantém o tipo do que foi projetado. */
-const projetado: string = instancia.payload.value.gritado
-void projetado
+/** And the projection keeps the type of what was projected. */
+const projected: string = instance.payload.value.shouted
+void projected
 
-// @ts-expect-error o payload não declara essa chave
-void instancia.payload.value.naoExiste
+// @ts-expect-error the payload declares no such key
+void instance.payload.value.doesNotExist
 
-/** Metadata é opcional. */
-const semMeta = defineFormDomain('domain-guard-sem-meta', () => ({
-  fields: refFields({ nome: { label: 'Nome', value: '' } }),
+/** Metadata is optional. */
+const noMetadata = defineFormDomain('domain-guard-no-metadata', () => ({
+  fields: refFields({ name: { label: 'Name', value: '' } }),
 }))
 
-const nome: string = semMeta().values.value.nome
-void nome
+const name: string = noMetadata().values.value.name
+void name
 </script>
 
 <template>
   <div>
-    <!-- o caso que originou tudo: v-bind num componente com defineModel<string>() -->
+    <!-- the case that started it all: v-bind onto a defineModel<string>() component -->
     <ModelInput v-bind="form.register('username')" />
-    <ModelInput v-bind="form.register('perfil')" />
-    {{ tipo }} {{ parcial }} {{ completo }} {{ titulo }} {{ gritado }} {{ projetado }} {{ nome }}
+    <ModelInput v-bind="form.register('profile')" />
+    {{ personType }} {{ partial }} {{ complete }} {{ title }} {{ shouted }} {{ projected }} {{ name }}
   </div>
 </template>

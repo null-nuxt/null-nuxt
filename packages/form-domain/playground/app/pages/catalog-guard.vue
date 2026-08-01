@@ -1,43 +1,43 @@
 <script setup lang="ts">
 /**
- * Fixture do catálogo: `useFormDomain('slug')` tem que devolver AQUELE domínio,
- * com os campos e o que o setup expôs tipados — não uma união de todos.
+ * Catalog fixture: `useFormDomain('slug')` has to return THAT domain, with its
+ * fields and whatever its setup exposed typed — not a union of all of them.
  */
-const domain = useFormDomain('justica-federal')
+const domain = useFormDomain('federal-court')
 
-// o que o setup expôs, tipado
+// what the setup exposed, typed
 const sku: string = domain.sku.value
 const price: number = domain.price.value
-const isPF: boolean = domain.isPF.value
+const isIndividual: boolean = domain.isIndividual.value
 
-// os campos daquele domínio
-const tipo: 'PF' | 'PJ' | '' = domain.values.value.tipoPessoa
+// that domain's own fields
+const personType: 'PF' | 'PJ' | '' = domain.values.value.personType
 
-// @ts-expect-error slug que não existe entre os domínios descobertos
-useFormDomain('nao-existe')
+// @ts-expect-error a slug that isn't among the discovered domains
+useFormDomain('does-not-exist')
 
-// @ts-expect-error este domínio não expôs essa chave
-const semChave = domain.naoExiste
+// @ts-expect-error this domain exposed no such key
+const missing = domain.doesNotExist
 
 /**
- * O catálogo lê metadata SEM instanciar: sai da factory, não de uma instância.
- * Se isso regredir para leitura de instância, a listagem volta a rodar um setup
- * por domínio só pra renderizar um link.
+ * The catalog reads metadata WITHOUT instantiating: it comes off the factory,
+ * not off an instance. If this regresses to an instance read, a listing goes
+ * back to running one setup per domain just to render a link.
  */
-const catalogo = useFormDomainsMetadata()
-const titulo: string | undefined = catalogo[0]?.metadata.title
-const ordem: number | undefined = catalogo[0]?.metadata.order
+const catalog = useFormDomainsMetadata()
+const title: string | undefined = catalog[0]?.metadata.title
+const order: number | undefined = catalog[0]?.metadata.order
 
-// @ts-expect-error metadata não declara essa chave
-const semMetadata = catalogo[0]?.metadata.naoExiste
+// @ts-expect-error metadata declares no such key
+const missingMetadata = catalog[0]?.metadata.doesNotExist
 
-const todos = useFormDomains()
-const quantos: number = todos.length
+const all = useFormDomains()
+const howMany: number = all.length
 </script>
 
 <template>
   <div>
-    {{ sku }} {{ price }} {{ isPF }} {{ tipo }} {{ semChave }}
-    {{ titulo }} {{ ordem }} {{ semMetadata }} {{ quantos }}
+    {{ sku }} {{ price }} {{ isIndividual }} {{ personType }} {{ missing }}
+    {{ title }} {{ order }} {{ missingMetadata }} {{ howMany }}
   </div>
 </template>

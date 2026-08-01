@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * Input genérico do projeto. Repare que ele declara só o que usa — o
- * `register()` manda `options`/`mask` apenas quando o campo tem, então nada
- * sobra pra cair como atributo solto no DOM.
+ * The project's generic input. Note it declares only what it uses —
+ * `register()` sends `options`/`mask` only when the field has them, so nothing
+ * is left over to land as a stray DOM attribute.
  */
 defineProps<{
   name: string

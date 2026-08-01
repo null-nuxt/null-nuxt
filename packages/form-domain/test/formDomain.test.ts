@@ -6,165 +6,165 @@ import { defineFormDomain, toForm } from '../src/runtime/define'
 import { refField, refFields } from '../src/runtime/field'
 import { getFormRegistry } from '../src/runtime/registry'
 
-type Pessoa = 'PF' | 'PJ' | ''
+type PersonType = 'PF' | 'PJ' | ''
 
-const montar = () => {
+const build = () => {
   const f = refFields({
-    tipoPessoa: { label: 'Tipo de Pessoa', value: '' as Pessoa },
+    personType: { label: 'Person type', value: '' as PersonType },
     cpf: { label: 'CPF', value: '' },
     cnpj: { label: 'CNPJ', value: '' },
-    regiao: { label: 'Região', value: '' },
+    region: { label: 'Region', value: '' },
   })
 
   addRules(f, {
-    cpf: { canShow: () => f.tipoPessoa.value === 'PF', clearWhenHidden: true },
-    cnpj: { canShow: () => f.tipoPessoa.value === 'PJ', clearWhenHidden: true },
-    regiao: {
-      options: () => f.tipoPessoa.value === 'PF'
-        ? [{ label: '1ª Região', value: 'primeira' }]
-        : [{ label: 'Única', value: 'unica' }],
+    cpf: { canShow: () => f.personType.value === 'PF', clearWhenHidden: true },
+    cnpj: { canShow: () => f.personType.value === 'PJ', clearWhenHidden: true },
+    region: {
+      options: () => f.personType.value === 'PF'
+        ? [{ label: '1st Region', value: 'first' }]
+        : [{ label: 'Only', value: 'only' }],
     },
   })
 
   addSchemas(f, {
-    cpf: string().required('CPF obrigatório'),
-    cnpj: string().required('CNPJ obrigatório'),
+    cpf: string().required('CPF is required'),
+    cnpj: string().required('CNPJ is required'),
   })
 
   return f
 }
 
-describe('setup: montagem em componente', () => {
-  it('deriva values e canShow das regras anexadas ao campo', async () => {
-    const form = toForm(montar())
+describe('assembling inside a component', () => {
+  it('derives values and canShow from the rules attached to the field', async () => {
+    const form = toForm(build())
 
     expect(form.canShow.value.cpf).toBe(false)
 
-    form.set({ tipoPessoa: 'PF' })
+    form.set({ personType: 'PF' })
     await nextTick()
 
     expect(form.canShow.value.cpf).toBe(true)
     expect(form.canShow.value.cnpj).toBe(false)
   })
 
-  /** A promessa de "sem `.when()`": campo escondido nem entra na validação. */
-  it('PF valida com o CNPJ vazio, mesmo o CNPJ sendo required', async () => {
-    const form = toForm(montar())
-    form.set({ tipoPessoa: 'PF', cpf: '11111111111' })
+  /** The "no `.when()`" promise: a hidden field never enters validation. */
+  it('an individual validates with an empty CNPJ, required or not', async () => {
+    const form = toForm(build())
+    form.set({ personType: 'PF', cpf: '11111111111' })
     await nextTick()
 
     expect((await form.validate()).valid).toBe(true)
   })
 
-  it('limpa o campo que deixou de aparecer', async () => {
-    const form = toForm(montar())
-    form.set({ tipoPessoa: 'PF', cpf: '111' })
+  it('clears the field that stopped showing', async () => {
+    const form = toForm(build())
+    form.set({ personType: 'PF', cpf: '111' })
     await nextTick()
 
-    form.set({ tipoPessoa: 'PJ' })
+    form.set({ personType: 'PJ' })
     await nextTick()
 
     expect(form.values.value.cpf).toBe('')
   })
 
-  it('visible deixa de fora o que a regra escondeu; values não', async () => {
-    const form = toForm(montar())
-    form.set({ tipoPessoa: 'PJ', cnpj: '222' })
+  it('visible leaves out what a rule hid; values does not', async () => {
+    const form = toForm(build())
+    form.set({ personType: 'PJ', cnpj: '222' })
     await nextTick()
 
     expect(form.visible.value).not.toHaveProperty('cpf')
     expect(form.values.value).toHaveProperty('cpf')
   })
 
-  it('options da regra vencem, e selected resolve o texto', async () => {
-    const f = montar()
+  it('the rule options win, and selected resolves the text', async () => {
+    const f = build()
     const form = toForm(f)
 
-    form.set({ tipoPessoa: 'PF', regiao: 'primeira' })
+    form.set({ personType: 'PF', region: 'first' })
     await nextTick()
 
-    expect(form.options.value.regiao.map(o => o.value)).toEqual(['primeira'])
-    expect(f.regiao.selected?.label).toBe('1ª Região')
+    expect(form.options.value.region.map(o => o.value)).toEqual(['first'])
+    expect(f.region.selected?.label).toBe('1st Region')
   })
 
-  /** Derivado, não guardado: muda a lista e o texto acompanha em vez de envelhecer. */
-  it('selected esvazia quando a escolha sai da lista', async () => {
-    const f = montar()
+  /** Derived, not stored: change the list and the text follows instead of ageing. */
+  it('selected empties when the choice leaves the list', async () => {
+    const f = build()
     toForm(f)
 
-    f.tipoPessoa.value = 'PF'
-    f.regiao.value = 'primeira'
+    f.personType.value = 'PF'
+    f.region.value = 'first'
     await nextTick()
-    expect(f.regiao.selected?.label).toBe('1ª Região')
+    expect(f.region.selected?.label).toBe('1st Region')
 
-    f.tipoPessoa.value = 'PJ'
+    f.personType.value = 'PJ'
     await nextTick()
 
-    expect(f.regiao.selected).toBeUndefined()
+    expect(f.region.selected).toBeUndefined()
   })
 
-  it('register manda só o que o campo tem', () => {
+  it('register sends only what the field has', () => {
     const f = refFields({
-      nome: { label: 'Nome', value: 'Ana', placeholder: 'Digite' },
-      perfil: { label: 'Perfil', value: '', options: [{ label: 'Advogado', value: 'adv' }] },
+      name: { label: 'Name', value: 'Ana', placeholder: 'Digite' },
+      profile: { label: 'Profile', value: '', options: [{ label: 'Lawyer', value: 'adv' }] },
     })
     const form = toForm(f)
 
-    expect(form.register('nome')).not.toHaveProperty('options')
-    expect(form.register('nome').placeholder).toBe('Digite')
-    expect(form.register('perfil').options?.map(o => o.value)).toEqual(['adv'])
+    expect(form.register('name')).not.toHaveProperty('options')
+    expect(form.register('name').placeholder).toBe('Digite')
+    expect(form.register('profile').options?.map(o => o.value)).toEqual(['adv'])
   })
 
-  it('o handler escreve o que o componente emitir', () => {
-    const form = toForm(refFields({ nome: { label: 'Nome', value: '' } }))
+  it('the handler writes whatever the component emits', () => {
+    const form = toForm(refFields({ name: { label: 'Name', value: '' } }))
 
-    form.register('nome')['onUpdate:modelValue']('Ana')
-    expect(form.values.value.nome).toBe('Ana')
+    form.register('name')['onUpdate:modelValue']('Ana')
+    expect(form.values.value.name).toBe('Ana')
   })
 
-  it('onChange descarta resposta obsoleta', async () => {
+  it('onChange discards a stale response', async () => {
     const spy = vi.fn()
     const f = refFields({
-      gatilho: { label: 'Gatilho', value: '' },
-      alvo: { label: 'Alvo', value: '' },
+      trigger: { label: 'Trigger', value: '' },
+      target: { label: 'Target', value: '' },
     })
 
-    addRule(f.gatilho, {
+    addRule(f.trigger, {
       onChange: (value, ctx) => {
         spy(value)
-        ctx.patch({ alvo: `de-${value}` })
+        ctx.patch({ target: `de-${value}` })
       },
     })
 
     const form = toForm(f)
-    f.gatilho.value = 'x'
+    f.trigger.value = 'x'
     await nextTick()
 
     expect(spy).toHaveBeenCalledWith('x')
-    expect(form.values.value.alvo).toBe('de-x')
+    expect(form.values.value.target).toBe('de-x')
   })
 })
 
-describe('setup: campo avulso reutilizável', () => {
-  /** O caso que justifica `refField()` singular: um campo com máscara compartilhado. */
+describe('a standalone, reusable field', () => {
+  /** What justifies the singular `refField()`: a masked field shared across domains. */
   it('aceita um refField() pronto ao lado das declarações', () => {
     const cpf = refField({ label: 'CPF', value: '', mask: 'cpf' })
 
-    const form = toForm(refFields({ cpf, nome: { label: 'Nome', value: '' } }))
+    const form = toForm(refFields({ cpf, name: { label: 'Name', value: '' } }))
 
     expect(form.register('cpf').mask).toBe('cpf')
-    // a chave só é aprendida na montagem
+    // the key is only learned at assembly
     expect(form.fields.cpf.key).toBe('cpf')
   })
 })
 
-describe('setup: domínio compartilhado', () => {
+describe('a shared domain', () => {
   const definir = (id: string) => defineFormDomain(id, { title: 'Certidão', order: 10 }, () => {
-    const f = montar()
-    return { fields: f, isPF: { value: f.tipoPessoa.value === 'PF' } }
+    const f = build()
+    return { fields: f, isPF: { value: f.personType.value === 'PF' } }
   })
 
-  it('lê metadata da factory sem instanciar', () => {
+  it('reads metadata off the factory without instantiating', () => {
     const domain = definir('setup-metadata')
 
     expect(domain.metadata.title).toBe('Certidão')
@@ -174,144 +174,144 @@ describe('setup: domínio compartilhado', () => {
     expect(getFormRegistry().has('setup-metadata')).toBe(true)
   })
 
-  it('compartilha a instância, como defineStore', () => {
-    const domain = definir('setup-compartilhado')
+  it('shares the instance, like defineStore', () => {
+    const domain = definir('setup-shared')
     expect(domain()).toBe(domain())
   })
 
-  it('expõe o que o setup devolveu além dos campos', () => {
-    const domain = definir('setup-exposto')
+  it('exposes what the setup returned beyond the fields', () => {
+    const domain = definir('setup-exposed')
     expect(domain().isPF).toEqual({ value: false })
   })
 
-  it('sem projeção, o payload é values', () => {
-    const domain = defineFormDomain('setup-sem-payload', () => ({
-      fields: refFields({ nome: { label: 'Nome', value: 'Ana' } }),
+  it('with no projection, the payload is values', () => {
+    const domain = defineFormDomain('setup-no-payload', () => ({
+      fields: refFields({ name: { label: 'Name', value: 'Ana' } }),
     }))
 
-    expect(domain().payload.value).toEqual({ nome: 'Ana' })
+    expect(domain().payload.value).toEqual({ name: 'Ana' })
   })
 
-  it('a projeção recebe visible e o que o setup expôs', async () => {
+  it('the projection receives visible and what the setup exposed', async () => {
     const domain = defineFormDomain('setup-payload', () => {
-      const f = montar()
+      const f = build()
       return { fields: f, price: { value: 59.9 } }
     }).payload(ctx => ({
       ...ctx.visible,
-      regiao_descricao: ctx.fields.regiao.selected?.label ?? '',
+      region_label: ctx.fields.region.selected?.label ?? '',
       price: ctx.price.value,
     }))
 
     const form = domain()
-    form.set({ tipoPessoa: 'PF', regiao: 'primeira' })
+    form.set({ personType: 'PF', region: 'first' })
     await nextTick()
 
     expect(form.payload.value).not.toHaveProperty('cnpj')
-    expect(form.payload.value.regiao_descricao).toBe('1ª Região')
+    expect(form.payload.value.region_label).toBe('1st Region')
     expect(form.payload.value.price).toBe(59.9)
   })
 
-  it('metadata é opcional', () => {
-    const domain = defineFormDomain('setup-sem-metadata', () => ({
-      fields: refFields({ nome: { label: 'Nome', value: '' } }),
+  it('metadata is optional', () => {
+    const domain = defineFormDomain('setup-no-metadata', () => ({
+      fields: refFields({ name: { label: 'Name', value: '' } }),
     }))
 
     expect(domain.metadata).toEqual({})
-    expect(domain().values.value.nome).toBe('')
+    expect(domain().values.value.name).toBe('')
   })
 })
 
-describe('setup: guarda de estado compartilhado entre requests', () => {
+describe('the guard against state shared across requests', () => {
   /**
-   * O furo que os tipos não pegam: `refFields()` no topo de um módulo roda uma vez
-   * por processo, então sob SSR a segunda request dirige os mesmos objetos que a
-   * primeira preencheu. A guarda não checa "tinha escopo quando criou" — isso
-   * dispararia em teste e em qualquer helper — e sim a condição que É o bug:
-   * uma fields object dirigindo dois formulários.
+   * The hole the types can't see: `refFields()` at module scope runs once per
+   * process, so under SSR the second request drives the objects the first one
+   * filled in. The guard doesn't check "was there a scope when it was created" —
+   * that would fire in tests and in any helper — but the condition that IS the
+   * bug: one fields object driving two forms.
    */
-  it('avisa quando a mesma fields object vira um segundo formulário', () => {
-    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const compartilhados = refFields({ nome: { label: 'Nome', value: '' } })
+  it('warns when one fields object drives a second form', () => {
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const shared = refFields({ name: { label: 'Name', value: '' } })
 
-    toForm(compartilhados)
-    expect(avisos).not.toHaveBeenCalled()
+    toForm(shared)
+    expect(warnings).not.toHaveBeenCalled()
 
-    toForm(compartilhados)
-    expect(avisos).toHaveBeenCalledOnce()
-    expect(avisos.mock.calls[0]?.[0]).toContain('module scope')
+    toForm(shared)
+    expect(warnings).toHaveBeenCalledOnce()
+    expect(warnings.mock.calls[0]?.[0]).toContain('module scope')
 
-    avisos.mockRestore()
+    warnings.mockRestore()
   })
 
-  it('não avisa quando cada formulário monta os seus', () => {
-    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const criar = () => refFields({ nome: { label: 'Nome', value: '' } })
+  it('stays quiet when each form builds its own', () => {
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const make = () => refFields({ name: { label: 'Name', value: '' } })
 
-    toForm(criar())
-    toForm(criar())
+    toForm(make())
+    toForm(make())
 
-    expect(avisos).not.toHaveBeenCalled()
-    avisos.mockRestore()
+    expect(warnings).not.toHaveBeenCalled()
+    warnings.mockRestore()
   })
 
-  /** Descartar devolve os campos, senão remontar o mesmo form acusaria à toa. */
-  it('não avisa ao remontar depois de descartar', () => {
-    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const campos = refFields({ nome: { label: 'Nome', value: '' } })
+  /** Disposing releases the fields, so rebuilding the same form stays quiet. */
+  it('stays quiet when rebuilding after disposing', () => {
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const formFields = refFields({ name: { label: 'Name', value: '' } })
 
-    toForm(campos).dispose()
-    toForm(campos)
+    toForm(formFields).dispose()
+    toForm(formFields)
 
-    expect(avisos).not.toHaveBeenCalled()
-    avisos.mockRestore()
+    expect(warnings).not.toHaveBeenCalled()
+    warnings.mockRestore()
   })
 
   /**
-   * O caso real sob SSR: o setup devolve campos de módulo, e a segunda request
-   * roda o setup de novo recebendo os MESMOS objetos.
+   * The real SSR case: the setup returns module-scope fields, and the next
+   * request runs it again receiving the SAME objects.
    */
-  it('pega o domínio cujo setup devolve campos de módulo', () => {
-    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const deModulo = refFields({ nome: { label: 'Nome', value: '' } })
+  it('catches a domain whose setup returns module-scope fields', () => {
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const fromModule = refFields({ name: { label: 'Name', value: '' } })
 
-    const domain = defineFormDomain('setup-vazamento', () => ({ fields: deModulo }))
+    const domain = defineFormDomain('setup-leak', () => ({ fields: fromModule }))
 
     domain()
-    getFormRegistry().delete('setup-vazamento') // simula a request seguinte
+    getFormRegistry().delete('setup-leak') // simulates the next request
     domain()
 
-    expect(avisos).toHaveBeenCalledOnce()
-    avisos.mockRestore()
+    expect(warnings).toHaveBeenCalledOnce()
+    warnings.mockRestore()
   })
 })
 
-describe('campo escondido: validação', () => {
-  it('PJ continua sendo cobrada pelo CNPJ', async () => {
-    const form = toForm(montar())
-    form.set({ tipoPessoa: 'PJ' })
+describe('a hidden field and validation', () => {
+  it('a company is still asked for its CNPJ', async () => {
+    const form = toForm(build())
+    form.set({ personType: 'PJ' })
     await nextTick()
 
-    expect((await form.validate()).firstErrors.cnpj).toBe('CNPJ obrigatório')
+    expect((await form.validate()).firstErrors.cnpj).toBe('CNPJ is required')
   })
 
-  it('o documento do grupo oposto não é cobrado nem quando está sujo', async () => {
-    const f = montar()
+  it('the opposite document is not asked for, even when dirty', async () => {
+    const f = build()
     const form = toForm(f)
 
     // preenche o CPF enquanto ele ainda aparece, depois troca de grupo
-    form.set({ tipoPessoa: 'PF', cpf: '11111111111' })
+    form.set({ personType: 'PF', cpf: '11111111111' })
     await nextTick()
-    form.set({ tipoPessoa: 'PJ', cnpj: '22222222222222' })
+    form.set({ personType: 'PJ', cnpj: '22222222222222' })
     await nextTick()
 
     expect((await form.validate()).valid).toBe(true)
   })
 
-  it('devolve o campo à validação quando ele volta a aparecer', async () => {
-    const form = toForm(montar())
+  it('returns the field to validation when it shows again', async () => {
+    const form = toForm(build())
     expect(Object.keys(form.shape.value)).not.toContain('cpf')
 
-    form.set({ tipoPessoa: 'PF' })
+    form.set({ personType: 'PF' })
     await nextTick()
 
     expect(Object.keys(form.shape.value)).toContain('cpf')
@@ -320,81 +320,80 @@ describe('campo escondido: validação', () => {
 
 describe('composeSchema', () => {
   /**
-   * A razão de existir: quem compõe na mão fora de um `computed` congela o
-   * schema no primeiro valor, e o campo que a regra escondeu depois continua
-   * exigido.
+   * Why it exists: composing by hand outside a `computed` freezes the schema
+   * at its first value, so a field a rule hides later stays required.
    */
-  it('recompõe quando a visibilidade muda', async () => {
-    const form = toForm(montar())
-    const composto = form.composeSchema(shape => Object.keys(shape))
+  it('recomposes when visibility changes', async () => {
+    const form = toForm(build())
+    const composed = form.composeSchema(shape => Object.keys(shape))
 
-    expect(composto.value).not.toContain('cpf')
+    expect(composed.value).not.toContain('cpf')
 
-    form.set({ tipoPessoa: 'PF' })
+    form.set({ personType: 'PF' })
     await nextTick()
 
-    expect(composto.value).toContain('cpf')
+    expect(composed.value).toContain('cpf')
   })
 
-  it('entrega os validadores declarados, não uma cópia vazia', () => {
-    const form = toForm(montar())
+  it('hands over the declared validators, not an empty copy', () => {
+    const form = toForm(build())
     expect(form.composeSchema(shape => shape).value).toBe(form.shape.value)
   })
 })
 
-describe('limpeza do campo escondido', () => {
-  const comObs = () => {
+describe('clearing a hidden field', () => {
+  const withNotes = () => {
     const f = refFields({
-      tipo: { label: 'Tipo', value: '' as Pessoa },
+      kind: { label: 'Kind', value: '' as PersonType },
       cpf: { label: 'CPF', value: '' },
       cnpj: { label: 'CNPJ', value: '' },
-      obs: { label: 'Observação', value: '' },
+      notes: { label: 'Notes', value: '' },
     })
 
     addRules(f, {
-      cpf: { canShow: () => f.tipo.value === 'PF', clearWhenHidden: true },
-      cnpj: { canShow: () => f.tipo.value === 'PJ', clearWhenHidden: true },
-      obs: { canShow: () => f.tipo.value === 'PF' },
+      cpf: { canShow: () => f.kind.value === 'PF', clearWhenHidden: true },
+      cnpj: { canShow: () => f.kind.value === 'PJ', clearWhenHidden: true },
+      notes: { canShow: () => f.kind.value === 'PF' },
     })
 
     return f
   }
 
   /**
-   * O caso que o `onChange` escrito à mão errava: voltar pra vazio esconde os
-   * DOIS grupos, e a versão manual só limpava um.
+   * The case a hand-written `onChange` got wrong: going back to empty hides
+   * BOTH groups, and the manual version only cleared one.
    */
-  it('voltar ao valor vazio limpa os dois grupos', async () => {
-    const form = toForm(comObs())
+  it('going back to empty clears both groups', async () => {
+    const form = toForm(withNotes())
 
-    form.set({ tipo: 'PF', cpf: '111' })
+    form.set({ kind: 'PF', cpf: '111' })
     await nextTick()
-    form.set({ tipo: 'PJ' })
+    form.set({ kind: 'PJ' })
     await nextTick()
     form.set({ cnpj: '222' })
-    form.set({ tipo: '' })
+    form.set({ kind: '' })
     await nextTick()
 
     expect(form.values.value.cpf).toBe('')
     expect(form.values.value.cnpj).toBe('')
   })
 
-  /** Opt-in porque apaga dado: num multi-etapa o escondido costuma guardar. */
-  it('campo sem a marca mantém o valor mesmo escondido', async () => {
-    const form = toForm(comObs())
+  /** Opt-in because it erases data: in a multi-step form a hidden field keeps it. */
+  it('a field without the flag keeps its value even when hidden', async () => {
+    const form = toForm(withNotes())
 
-    form.set({ tipo: 'PF', obs: 'anotação' })
+    form.set({ kind: 'PF', notes: 'a note' })
     await nextTick()
-    form.set({ tipo: 'PJ' })
+    form.set({ kind: 'PJ' })
     await nextTick()
 
-    expect(form.values.value.obs).toBe('anotação')
+    expect(form.values.value.notes).toBe('a note')
   })
 
-  it('não limpa enquanto o campo continua visível', async () => {
-    const form = toForm(comObs())
+  it('does not clear while the field is still visible', async () => {
+    const form = toForm(withNotes())
 
-    form.set({ tipo: 'PF', cpf: '111' })
+    form.set({ kind: 'PF', cpf: '111' })
     await nextTick()
     form.set({ cpf: '222' })
     await nextTick()
@@ -403,144 +402,144 @@ describe('limpeza do campo escondido', () => {
   })
 })
 
-describe('coerência entre options e schema', () => {
+describe('options and schema agreeing', () => {
   /**
-   * Uma fonte só para as duas coisas. Sem isso, a lista da UI e a do backend
-   * divergem em silêncio — o select oferece o que o schema recusa.
+   * One source for both. Without it the UI's list and the backend's drift
+   * apart in silence — the select offers what the schema rejects.
    */
-  const REGIOES_PF = [{ label: '1ª', value: 'primeira' }]
-  const REGIOES_PJ = [{ label: 'Nacional', value: 'nacional' }]
+  const REGIONS_INDIVIDUAL = [{ label: '1st', value: 'first' }]
+  const REGIONS_COMPANY = [{ label: 'National', value: 'national' }]
 
-  const comRegiao = () => {
+  const withRegion = () => {
     const f = refFields({
-      tipo: { label: 'Tipo', value: '' as Pessoa },
-      regiao: { label: 'Região', value: '' },
+      kind: { label: 'Kind', value: '' as PersonType },
+      region: { label: 'Region', value: '' },
     })
 
-    const lista = () => {
-      if (f.tipo.value === 'PF') return REGIOES_PF
-      if (f.tipo.value === 'PJ') return REGIOES_PJ
+    const list = () => {
+      if (f.kind.value === 'PF') return REGIONS_INDIVIDUAL
+      if (f.kind.value === 'PJ') return REGIONS_COMPANY
       return []
     }
 
-    addRules(f, { regiao: { options: lista } })
+    addRules(f, { region: { options: list } })
     addSchemas(f, {
-      regiao: () => string().oneOf(lista().map(o => o.value), 'Região inválida').required(),
+      region: () => string().oneOf(list().map(o => o.value), 'Invalid region').required(),
     })
 
     return f
   }
 
-  it('sem tipo escolhido as options ficam vazias, não as do outro tipo', () => {
-    const form = toForm(comRegiao())
-    expect(form.options.value.regiao).toEqual([])
+  it('with no type chosen the options are empty, not the other set', () => {
+    const form = toForm(withRegion())
+    expect(form.options.value.region).toEqual([])
   })
 
-  it('o schema recusa valor que não está nas options do contexto', async () => {
-    const form = toForm(comRegiao())
+  it('the schema rejects a value absent from the context options', async () => {
+    const form = toForm(withRegion())
 
-    form.set({ tipo: 'PF', regiao: 'nacional' })
+    form.set({ kind: 'PF', region: 'national' })
     await nextTick()
-    expect((await form.validate()).errors.regiao).toBeDefined()
+    expect((await form.validate()).errors.region).toBeDefined()
 
-    form.set({ regiao: 'primeira' })
+    form.set({ region: 'first' })
     await nextTick()
-    expect((await form.validate()).errors.regiao).toBeUndefined()
+    expect((await form.validate()).errors.region).toBeUndefined()
   })
 })
 
-describe('onChange: escrita explícita', () => {
-  const comAutofill = (responder: (valor: string) => Promise<string>) => {
+describe('onChange: explicit writes', () => {
+  const withAutofill = (answer: (valor: string) => Promise<string>) => {
     const f = refFields({
       cep: { label: 'CEP', value: '' },
-      cidade: { label: 'Cidade', value: '' },
+      city: { label: 'City', value: '' },
     })
 
     addRule(f.cep, {
       onChange: async (valor, ctx) => {
-        const cidade = await responder(valor)
-        ctx.patch({ cidade })
+        const city = await answer(valor)
+        ctx.patch({ city })
       },
     })
 
     return f
   }
 
-  it('aplica atualização de autopreenchimento', async () => {
-    const form = toForm(comAutofill(async () => 'Recife'))
+  it('applies an autofill update', async () => {
+    const form = toForm(withAutofill(async () => 'Recife'))
 
     form.set({ cep: '50000000' })
     await nextTick()
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(form.values.value.cidade).toBe('Recife')
+    expect(form.values.value.city).toBe('Recife')
   })
 
   /**
-   * O ponto do `patch` ser pedido e não escrita: uma consulta lenta não pode
-   * sobrescrever o que o usuário digitou depois.
+   * Why `patch` is a request and not a write: a slow lookup must not overwrite
+   * what the user typed afterwards.
    */
-  it('descarta resposta obsoleta', async () => {
-    const atrasos: Record<string, number> = { primeiro: 20, segundo: 1 }
+  it('discards a stale response', async () => {
+    const delays: Record<string, number> = { first: 20, second: 1 }
 
-    const form = toForm(comAutofill(async (valor) => {
-      await new Promise(resolve => setTimeout(resolve, atrasos[valor] ?? 0))
-      return `cidade-${valor}`
+    const form = toForm(withAutofill(async (valor) => {
+      await new Promise(resolve => setTimeout(resolve, delays[valor] ?? 0))
+      return `city-${valor}`
     }))
 
-    form.set({ cep: 'primeiro' })
+    form.set({ cep: 'first' })
     await nextTick()
-    form.set({ cep: 'segundo' })
+    form.set({ cep: 'second' })
     await nextTick()
 
     await new Promise(resolve => setTimeout(resolve, 40))
 
-    // o primeiro respondeu por último, e mesmo assim não venceu
-    expect(form.values.value.cidade).toBe('cidade-segundo')
+    // the first one answered last, and still did not win
+    expect(form.values.value.city).toBe('city-second')
   })
 
-  it('ignora chave desconhecida devolvida pela regra', async () => {
-    const f = refFields({ gatilho: { label: 'Gatilho', value: '' } })
-    addRule(f.gatilho, {
-      onChange: (_valor, ctx) => ctx.patch({ naoExiste: 'x' } as never),
+  it('ignores an unknown key handed back by the rule', async () => {
+    const f = refFields({ trigger: { label: 'Trigger', value: '' } })
+    addRule(f.trigger, {
+      onChange: (_valor, ctx) => ctx.patch({ doesNotExist: 'x' } as never),
     })
 
     const form = toForm(f)
-    f.gatilho.value = 'x'
+    f.trigger.value = 'x'
     await nextTick()
 
-    expect(form.values.value).toEqual({ gatilho: 'x' })
+    expect(form.values.value).toEqual({ trigger: 'x' })
   })
 })
 
-describe('instância e efeitos', () => {
-  it('reset volta aos valores iniciais', async () => {
-    const form = toForm(montar())
+describe('instance and effects', () => {
+  it('reset goes back to the initial values', async () => {
+    const form = toForm(build())
 
-    form.set({ tipoPessoa: 'PF', cpf: '111' })
+    form.set({ personType: 'PF', cpf: '111' })
     await nextTick()
     form.reset()
 
     expect(form.values.value.cpf).toBe('')
-    expect(form.values.value.tipoPessoa).toBe('')
+    expect(form.values.value.personType).toBe('')
   })
 
-  it('cada montagem tem estado próprio', () => {
-    const primeiro = toForm(montar())
-    const segundo = toForm(montar())
+  it('each assembly has its own state', () => {
+    const first = toForm(build())
+    const second = toForm(build())
 
-    primeiro.set({ cpf: '111' })
+    first.set({ cpf: '111' })
 
-    expect(segundo.values.value.cpf).toBe('')
+    expect(second.values.value.cpf).toBe('')
   })
 
-  /** Sub-componente consome a mesma instância sem registrar os efeitos de novo. */
-  it('onChange roda uma vez só com vários consumidores', async () => {
+  /** A sub-component consumes the same instance without registering effects again. */
+  it('onChange runs once across several consumers', async () => {
     const spy = vi.fn()
 
-    const domain = defineFormDomain('efeitos-uma-vez', () => {
-      const f = refFields({ gatilho: { label: 'Gatilho', value: '' } })
-      addRule(f.gatilho, { onChange: valor => spy(valor) })
+    const domain = defineFormDomain('effects-once', () => {
+      const f = refFields({ trigger: { label: 'Trigger', value: '' } })
+      addRule(f.trigger, { onChange: valor => spy(valor) })
       return { fields: f }
     })
 
@@ -548,94 +547,94 @@ describe('instância e efeitos', () => {
     domain()
     domain()
 
-    pai.set({ gatilho: 'x' })
+    pai.set({ trigger: 'x' })
     await nextTick()
 
     expect(spy).toHaveBeenCalledOnce()
   })
 })
 
-describe('selected no engine', () => {
+describe('selected on the engine', () => {
   /**
-   * Estava só no objeto do campo, e alcançá-lo era a única razão de um
-   * consumidor precisar dos campos crus — o que criava dois caminhos pro mesmo
-   * dado. No engine, o payload e o componente leem plano.
+   * It lived only on the field object, and reaching it was the only reason a
+   * consumer needed the raw fields — which left two paths to the same value. On
+   * the engine, the payload and the component read it flat.
    */
-  it('resolve o texto da escolha sem passar pelos campos', async () => {
-    const f = montar()
+  it('resolves the chosen label without going through the fields', async () => {
+    const f = build()
     const form = toForm(f)
 
-    form.set({ tipoPessoa: 'PF', regiao: 'primeira' })
+    form.set({ personType: 'PF', region: 'first' })
     await nextTick()
 
-    expect(form.selected.value.regiao?.label).toBe('1ª Região')
-    expect(form.selected.value.regiao).toEqual(f.regiao.selected)
+    expect(form.selected.value.region?.label).toBe('1st Region')
+    expect(form.selected.value.region).toEqual(f.region.selected)
   })
 
-  it('esvazia quando a escolha sai da lista', async () => {
-    const f = montar()
+  it('empties when the choice leaves the list', async () => {
+    const f = build()
     const form = toForm(f)
 
-    form.set({ tipoPessoa: 'PF', regiao: 'primeira' })
+    form.set({ personType: 'PF', region: 'first' })
     await nextTick()
-    form.set({ tipoPessoa: 'PJ' })
+    form.set({ personType: 'PJ' })
     await nextTick()
 
-    expect(form.selected.value.regiao).toBeUndefined()
+    expect(form.selected.value.region).toBeUndefined()
   })
 
-  it('o payload lê selected direto do contexto', async () => {
-    const domain = defineFormDomain('selected-payload', () => ({ fields: montar() }))
+  it('the payload reads selected straight off the context', async () => {
+    const domain = defineFormDomain('selected-payload', () => ({ fields: build() }))
       .payload(ctx => ({
         ...ctx.visible,
-        regiao_descricao: ctx.selected.regiao?.label ?? '',
+        region_label: ctx.selected.region?.label ?? '',
       }))
 
     const form = domain()
-    form.set({ tipoPessoa: 'PF', regiao: 'primeira' })
+    form.set({ personType: 'PF', region: 'first' })
     await nextTick()
 
-    expect(form.payload.value.regiao_descricao).toBe('1ª Região')
+    expect(form.payload.value.region_label).toBe('1st Region')
   })
 })
 
-describe('declaração inerte no topo do módulo', () => {
+describe('an inert declaration at module scope', () => {
   /**
-   * O jeito seguro de tirar os campos do arquivo do domínio: exportar a
-   * DECLARAÇÃO, não os campos construídos. Dado puro não é estado reativo,
-   * então não há o que vazar entre requests — o furo deixa de existir em vez de
-   * ser avisado pela guarda.
+   * The safe way to move fields out of the domain's file: export the
+   * DECLARATION, not the built fields. Plain data is not reactive state, so
+   * there is nothing to leak between requests — the hole stops existing rather
+   * than being reported by the guard.
    */
-  const declaracao = {
-    tipoPessoa: { label: 'Tipo', value: '' as Pessoa },
-    perfil: { label: 'Perfil', value: '', options: [{ label: 'Adv', value: 'adv' }] },
+  const declaration = {
+    personType: { label: 'Kind', value: '' as PersonType },
+    profile: { label: 'Profile', value: '', options: [{ label: 'Adv', value: 'adv' }] },
   }
 
-  it('a mesma declaração alimenta formulários independentes, sem aviso', () => {
-    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  it('one declaration feeds independent forms, with no warning', () => {
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    const primeiro = toForm(refFields(declaracao))
-    const segundo = toForm(refFields(declaracao))
+    const first = toForm(refFields(declaration))
+    const second = toForm(refFields(declaration))
 
-    primeiro.set({ tipoPessoa: 'PF' })
+    first.set({ personType: 'PF' })
 
-    expect(segundo.values.value.tipoPessoa).toBe('')
-    expect(avisos).not.toHaveBeenCalled()
+    expect(second.values.value.personType).toBe('')
+    expect(warnings).not.toHaveBeenCalled()
 
-    avisos.mockRestore()
+    warnings.mockRestore()
   })
 
-  it('a união declarada sobrevive à ida e volta pela const', () => {
-    const form = toForm(refFields(declaracao))
+  it('the declared union survives the round trip through the const', () => {
+    const form = toForm(refFields(declaration))
 
-    form.set({ tipoPessoa: 'PJ' })
-    const tipo: Pessoa = form.values.value.tipoPessoa
+    form.set({ personType: 'PJ' })
+    const kind: PersonType = form.values.value.personType
 
-    expect(tipo).toBe('PJ')
+    expect(kind).toBe('PJ')
   })
 
-  it('as options declaradas chegam no register', () => {
-    const form = toForm(refFields(declaracao))
-    expect(form.register('perfil').options?.map(o => o.value)).toEqual(['adv'])
+  it('the declared options reach register', () => {
+    const form = toForm(refFields(declaration))
+    expect(form.register('profile').options?.map(o => o.value)).toEqual(['adv'])
   })
 })

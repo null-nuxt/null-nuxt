@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import useJusticaFederalForm from '../forms/justica-federal'
+import useFederalCourt from '../forms/federal-court'
 
 /**
- * Sub-componente do mesmo domínio: consome a instância sem receber prop nenhuma
- * e sem registrar os watchers de novo.
+ * A sub-component of the same domain: it consumes the instance without taking
+ * a single prop, and without registering the watchers again.
  */
-const { values, canShow } = useJusticaFederalForm()
+const { values, canShow } = useFederalCourt()
 </script>
 
 <template>
   <div style="border-left: 3px solid #ddd; padding-left: .75rem; font-size: .875rem">
-    <strong>sub-componente</strong> — tipo: {{ values.tipoPessoa || '—' }} |
-    mostra cpf: {{ canShow.cpf }}
+    <strong>sub-component</strong> — type: {{ values.personType || '—' }} |
+    shows cpf: {{ canShow.cpf }}
   </div>
 </template>
