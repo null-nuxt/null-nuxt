@@ -5,13 +5,33 @@ All notable changes to this project are documented here. The format follows
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 independently.
 
-Each package is tagged on its own — `form-domain@0.2.0`, `tracking@0.1.0` —
+Each package is tagged on its own — `form-domain@0.2.1`, `tracking@0.1.0` —
 because they are installed and pinned separately. The repo-wide `v0.1.0` tag
 predates that and is kept only so existing pins keep resolving.
 
 ## [Unreleased]
 
 Nothing yet.
+
+## `@null-nuxt/form-domain` 0.2.1 — 2026-08-01
+
+### Fixed
+
+- **A layer declared before `withFields` no longer passes its key check in
+  silence.** `withFields` is what gives the check something to check against;
+  before it, `keyof F` is the whole `string` type, every key satisfies
+  `K extends Allowed`, and `OnlyKnownKeys` accepts anything. Validating a field
+  that doesn't exist compiled cleanly, which is worse than not checking at all —
+  it looked like the check had run. It is now a compile error naming the cause.
+
+  ```ts
+  createFormDomain('x')
+    .withRules({ anything: { canShow: () => true } })  // ✗ declare withFields first
+    .withFields({ /* ... */ })
+  ```
+
+  Correct order is unaffected. Only code that was already unchecked stops
+  compiling.
 
 ## `@null-nuxt/form-domain` 0.2.0 — 2026-08-01
 
@@ -161,5 +181,5 @@ it is listed under `Added` rather than split across change types.
   helpers, which extract the context from a partial builder and avoid a
   circular import.
 
-[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.2.0...HEAD
+[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.2.1...HEAD
 [0.1.0]: https://github.com/null-nuxt/null-nuxt/releases/tag/v0.1.0
