@@ -131,6 +131,29 @@ export type ValueOfSource<T> = T extends FieldObj<infer V> ? V : T extends Field
 /** What the source declared, so the extras stay answerable after assembly. */
 export type DeclaredOfSource<T> = T extends FieldObj<infer _V, infer _Vs, infer D> ? D : T
 
+/**
+ * Each entry checked against ITSELF: an option's value has to match the value
+ * its own field holds.
+ *
+ * `FieldsInput` can't express this. Entries have different value types from one
+ * another, so the record is keyed with `any`, and `any` is what switched the
+ * check off — a field holding a string accepted options holding numbers. The
+ * select would then render choices that can never match, `selected` would never
+ * resolve, and a `oneOf` schema would reject everything the user picked.
+ *
+ * The intersection with the input is the same double defence `OnlyKnownKeys`
+ * uses: on a mismatch the option's value type collapses to `never`, and the
+ * error lands on the offending value rather than on the whole object.
+ *
+ * Already-built fields carry `declaredOptions`, not `options`, so they skip the
+ * check — it already ran in `refField`.
+ */
+export type CheckedFields<T> = {
+  [K in keyof T]: T[K] extends { value: infer V, options: ReadonlyArray<{ value: infer OV }> }
+    ? [OV] extends [V] ? T[K] : { options: ReadonlyArray<FieldOption<V>> }
+    : T[K]
+}
+
 export type BuiltFields<T extends FieldsInput> = {
   [K in keyof T]: FieldObj<
     ValueOfSource<T[K]>,
@@ -146,7 +169,7 @@ export type BuiltFields<T extends FieldsInput> = {
  * Accepts a declaration or an already-built `refField()`, so a shared field drops
  * in next to inline ones.
  */
-export const refFields = <T extends FieldsInput>(input: T): BuiltFields<T> => {
+export const refFields = <T extends FieldsInput>(input: T & CheckedFields<T>): BuiltFields<T> => {
   const result: Record<string, unknown> = {}
 
   for (const [key, source] of Object.entries(input)) {

@@ -11,6 +11,21 @@ predates that and is kept only so existing pins keep resolving.
 
 ## [Unreleased]
 
+### `@null-nuxt/form-domain` — Fixed
+
+- **`refFields` checks an option's value against its own field again.** The
+  guarantee held through `refField()` and not through `refFields()`, which is
+  the path almost everyone takes: the record is keyed with `any`, because its
+  entries hold different value types from one another, and `any` switched the
+  check off. A field holding a string accepted options holding numbers — the
+  select would render choices that can never match, `selected` would never
+  resolve, and a `oneOf` schema would reject everything the user picked.
+
+  This regressed when the setup format was built. The builder forced every field
+  through `field()`, so the check always ran; `refFields` accepting a bare
+  declaration is what opened the gap — and the README kept claiming the
+  guarantee in 0.3.0 and 0.4.0.
+
 ### `@null-nuxt/form-domain` — Added
 
 - **`form.selected`**, the chosen option per field, back on the engine.
@@ -221,6 +236,21 @@ it is listed under `Added` rather than split across change types.
 - **Build-time configuration** through a generated virtual module rather than
   `runtimeConfig.public`, keeping it out of the SSR payload.
 - **Consent gate**: nothing is sent while consent is false.
+
+### `@null-nuxt/form-domain` — Fixed
+
+- **`refFields` checks an option's value against its own field again.** The
+  guarantee held through `refField()` and not through `refFields()`, which is
+  the path almost everyone takes: the record is keyed with `any`, because its
+  entries hold different value types from one another, and `any` switched the
+  check off. A field holding a string accepted options holding numbers — the
+  select would render choices that can never match, `selected` would never
+  resolve, and a `oneOf` schema would reject everything the user picked.
+
+  This regressed when the setup format was built. The builder forced every field
+  through `field()`, so the check always ran; `refFields` accepting a bare
+  declaration is what opened the gap — and the README kept claiming the
+  guarantee in 0.3.0 and 0.4.0.
 
 ### `@null-nuxt/form-domain` — Added
 

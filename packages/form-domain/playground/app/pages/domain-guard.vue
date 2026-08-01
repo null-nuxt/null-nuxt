@@ -70,6 +70,27 @@ const completo: string = form.values.value.username
 void parcial
 void completo
 
+/**
+ * O valor de uma option tem que bater com o do campo que a carrega. Isso valia
+ * pelo `refField()` singular e NÃO valia pelo `refFields()` — que é o caminho
+ * comum — porque o record é chaveado com `any`. Sem esta garantia o select
+ * renderiza escolhas que nunca casam: `selected` não resolve e um `oneOf`
+ * recusa tudo que o usuário escolher.
+ */
+refFields({
+  // @ts-expect-error o campo guarda string; esta option guarda number
+  quantidade: { label: 'Qtd', value: '', options: [{ label: 'Um', value: 1 }] },
+})
+
+refFields({
+  quantidade: {
+    label: 'Qtd',
+    value: '' as 'um' | 'dois' | '',
+    // a união do campo aceita option da mesma união
+    options: [{ label: 'Um', value: 'um' as const }],
+  },
+})
+
 /** Campo avulso entra ao lado das declarações e mantém a precisão. */
 const cpfCompartilhado = refField({ label: 'CPF', value: '', mask: 'cpf' })
 const comAvulso = toForm(refFields({ cpf: cpfCompartilhado, nome: { label: 'Nome', value: '' } }))
