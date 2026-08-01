@@ -1,5 +1,6 @@
 import { computed, watch } from 'vue'
 import { runStandard } from '../standard'
+import { claimFields, releaseFields } from './claim'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { ValidationResult } from '../standard'
 import type { AnyFields, FieldOption, FormEngine, ValuesOf } from './types'
@@ -13,6 +14,8 @@ import type { AnyFields, FieldOption, FormEngine, ValuesOf } from './types'
  * domain's setup.
  */
 export function createEngine<F extends AnyFields>(fields: F): FormEngine<F> {
+  claimFields(fields)
+
   const keys = Object.keys(fields)
 
   const values = computed(() => {
@@ -158,7 +161,7 @@ export function createEngine<F extends AnyFields>(fields: F): FormEngine<F> {
     reset: () => {
       for (const key of keys) fields[key]!.value = initialValues[key]
     },
-    dispose: () => {},
+    dispose: () => releaseFields(fields),
     register: (key: string) => {
       const target = fields[key]!
       const list = options.value[key] ?? []

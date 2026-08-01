@@ -13,9 +13,14 @@ export function useForm<F extends AnyFields>(fields: F): FormEngine<F> {
   const scope = effectScope(true)
   const engine = scope.run(() => createEngine(fields))!
 
-  if (getCurrentScope()) onScopeDispose(() => scope.stop())
+  const dispose = () => {
+    engine.dispose()
+    scope.stop()
+  }
 
-  return { ...engine, dispose: () => scope.stop() }
+  if (getCurrentScope()) onScopeDispose(dispose)
+
+  return { ...engine, dispose }
 }
 
 type PayloadContext<S extends SetupResult> = Exposed<S> & {
@@ -90,7 +95,10 @@ function create<Meta, S extends SetupResult>(
           payload: computed(() =>
             project ? project(payloadContext) : engine.values.value,
           ),
-          dispose: () => scope.stop(),
+          dispose: (): void => {
+            engine.dispose()
+            scope.stop()
+          },
         }
       })
 

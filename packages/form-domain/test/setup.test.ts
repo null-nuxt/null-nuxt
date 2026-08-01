@@ -220,3 +220,67 @@ describe('setup: domínio compartilhado', () => {
     expect(domain().values.value.nome).toBe('')
   })
 })
+
+describe('setup: guarda de estado compartilhado entre requests', () => {
+  /**
+   * O furo que os tipos não pegam: `fields()` no topo de um módulo roda uma vez
+   * por processo, então sob SSR a segunda request dirige os mesmos objetos que a
+   * primeira preencheu. A guarda não checa "tinha escopo quando criou" — isso
+   * dispararia em teste e em qualquer helper — e sim a condição que É o bug:
+   * uma fields object dirigindo dois formulários.
+   */
+  it('avisa quando a mesma fields object vira um segundo formulário', () => {
+    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const compartilhados = fields({ nome: { label: 'Nome', value: '' } })
+
+    useForm(compartilhados)
+    expect(avisos).not.toHaveBeenCalled()
+
+    useForm(compartilhados)
+    expect(avisos).toHaveBeenCalledOnce()
+    expect(avisos.mock.calls[0]?.[0]).toContain('module scope')
+
+    avisos.mockRestore()
+  })
+
+  it('não avisa quando cada formulário monta os seus', () => {
+    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const criar = () => fields({ nome: { label: 'Nome', value: '' } })
+
+    useForm(criar())
+    useForm(criar())
+
+    expect(avisos).not.toHaveBeenCalled()
+    avisos.mockRestore()
+  })
+
+  /** Descartar devolve os campos, senão remontar o mesmo form acusaria à toa. */
+  it('não avisa ao remontar depois de descartar', () => {
+    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const campos = fields({ nome: { label: 'Nome', value: '' } })
+
+    useForm(campos).dispose()
+    useForm(campos)
+
+    expect(avisos).not.toHaveBeenCalled()
+    avisos.mockRestore()
+  })
+
+  /**
+   * O caso real sob SSR: o setup devolve campos de módulo, e a segunda request
+   * roda o setup de novo recebendo os MESMOS objetos.
+   */
+  it('pega o domínio cujo setup devolve campos de módulo', () => {
+    const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const deModulo = fields({ nome: { label: 'Nome', value: '' } })
+
+    const domain = defineFormDomain('setup-vazamento', () => ({ fields: deModulo }))
+
+    domain()
+    getFormRegistry().delete('setup-vazamento') // simula a request seguinte
+    domain()
+
+    expect(avisos).toHaveBeenCalledOnce()
+    avisos.mockRestore()
+  })
+})
