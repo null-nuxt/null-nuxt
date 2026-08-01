@@ -261,9 +261,13 @@ and is how you say "this is a select, the list comes later":
 ```ts
 refFields({
   name: { label: 'Name', value: '' },
-  city: { label: 'City', value: '', options: [] as { label: string, value: string }[] },
+  city: { label: 'City', value: '', options: [] },
 })
 ```
+
+The bare `[]` needs no annotation. It infers as `never[]` and nothing reads it:
+the derived list and `form.options` are typed from the FIELD's value, never from
+whatever the declared array held.
 
 That marker does two things. It lets a rule derive the list — `addRules` rejects
 `deriveOptions` on a field that never declared any — and it keys `form.options`

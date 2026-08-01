@@ -14,7 +14,7 @@ const build = () => {
     cpf: { label: 'CPF', value: '' },
     cnpj: { label: 'CNPJ', value: '' },
     // the empty list is the marker: only a field that declares options gets them
-    region: { label: 'Region', value: '', options: [] as { label: string, value: string }[] },
+    region: { label: 'Region', value: '', options: [] },
   })
 
   addRules(f, {
@@ -415,7 +415,7 @@ describe('options and schema agreeing', () => {
     const f = refFields({
       kind: { label: 'Kind', value: '' as PersonType },
       // the empty list is the marker: only a field that declares options gets them
-    region: { label: 'Region', value: '', options: [] as { label: string, value: string }[] },
+    region: { label: 'Region', value: '', options: [] },
     })
 
     const list = () => {
@@ -653,7 +653,7 @@ describe('only declared choices are choices', () => {
   const withChoice = () => {
     const f = refFields({
       name: { label: 'Name', value: '' },
-      city: { label: 'City', value: '', options: [] as { label: string, value: string }[] },
+      city: { label: 'City', value: '', options: [] },
     })
 
     addRules(f, { city: { deriveOptions: () => [{ label: 'Recife', value: 'recife' }] } })

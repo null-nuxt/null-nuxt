@@ -22,8 +22,12 @@ export const declaration = {
    * The empty list is the marker, not an oversight: declaring `options` is how a
    * field says it holds a choice. That is what lets `region.ts` derive the list,
    * and what keeps `form.options` and `form.selected` from listing text inputs.
+   *
+   * No annotation needed. It infers as `never[]` and nothing cares — the derived
+   * list and `form.options` are both typed from the FIELD's value, never from
+   * whatever the declared array happened to hold.
    */
-  region: { label: 'Region', value: '', options: [] as { label: string, value: string }[] },
+  region: { label: 'Region', value: '', options: [] },
   notes: { label: 'Notes', value: '' },
 }
 

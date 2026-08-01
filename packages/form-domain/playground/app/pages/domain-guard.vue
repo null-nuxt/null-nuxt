@@ -71,15 +71,33 @@ void form.options.value.username
 // @ts-expect-error and it can never have a selected one
 void form.selected.value.username
 
-/** Declaring the list is also what lets a rule derive it. */
+/**
+ * Declaring the list is also what lets a rule derive it — and the bare `[]`
+ * needs no annotation, because the derived list is typed from the field's value
+ * rather than from what the declared array held.
+ */
 const withChoice = refFields({
   state: { label: 'State', value: '' },
-  city: { label: 'City', value: '', options: [] as { label: string, value: string }[] },
+  city: { label: 'City', value: '', options: [] },
 })
 
 addRules(withChoice, {
   city: { deriveOptions: () => withChoice.state.value ? [{ label: 'Recife', value: 'recife' }] : [] },
 })
+
+/**
+ * The bare `[]` carries no annotation, and the derived list is still typed from
+ * the field's value. If that ever stops being true the cast comes back, so it is
+ * pinned here rather than left to be rediscovered.
+ */
+const narrowed = refFields({
+  kind: { label: 'Kind', value: '' as 'a' | 'b' | '', options: [] },
+})
+
+addRules(narrowed, { kind: { deriveOptions: () => [{ label: 'A', value: 'a' as const }] } })
+
+const narrowedChoice: 'a' | 'b' | '' | undefined = toForm(narrowed).selected.value.kind?.value
+void narrowedChoice
 
 addRules(withChoice, {
   // @ts-expect-error `state` never said it holds a choice, so it gets no options
