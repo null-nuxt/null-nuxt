@@ -16,15 +16,15 @@ type Prettify<T> = { [K in keyof T]: T[K] } & {}
  */
 type RuleFor<R, K extends PropertyKey> = K extends keyof R ? NonNullable<R[K]> : object
 
-/** Context available already in `withComputed`: only what came from `fields`. */
+/** Context available already in `withFacts`: only what came from `fields`. */
 export interface FieldsContext<F extends FieldsDef> {
   values: FormValues<F>
   data: FormData<F>
 }
 
-/** The full context: what rules, schema and meta consume. */
+/** The full context: what rules, schema, outcome and payload consume. */
 export interface DomainContext<F extends FieldsDef, C> extends FieldsContext<F> {
-  computed: C
+  facts: C
 }
 
 /**
@@ -238,8 +238,8 @@ export interface FormDomainInstance<
   /** Reactive object: this is where `v-model` writes. */
   data: FormData<F>
   values: ComputedRef<FormValues<F>>
-  /** Derived business rules, shared by rules, schema and meta. */
-  computed: ComputedRef<C>
+  /** The domain's conclusions, shared by rules, schema, outcome and payload. */
+  facts: ComputedRef<C>
   canShow: ComputedRef<{ [K in keyof F]: boolean }>
   /** Effective options: the ones from `rules` beat the ones declared in `fields`. */
   options: ComputedRef<{ [K in keyof F]: ReadonlyArray<FieldOption<F[K]['value']>> }>
@@ -278,7 +278,7 @@ export interface FormDomainInstance<
 /**
  * The builder exists for a technical reason, not an aesthetic one: in a single
  * object literal TypeScript infers everything at once, and `rules` could not see
- * the inferred type of `computed`. Each `.withX()` returns a new type carrying
+ * the inferred type of `facts`. Each `.withX()` returns a new type carrying
  * what has accumulated so far.
  */
 export interface FormDomainBuilder<
@@ -291,8 +291,14 @@ export interface FormDomainBuilder<
 > {
   withFields: <F2 extends FieldsDef>(fields: F2) => FormDomainBuilder<F2, C, M, Id, S, R>
 
-  withComputed: <C2 extends object>(
-    compute: (ctx: FieldsContext<F>) => C2,
+  /**
+   * The shared conclusions the rest of the domain reads. Named `facts` rather
+   * than `computed` because Vue's `computed` is auto-imported in every SFC, so
+   * `ctx.computed` made the reader stop to work out which of the two it was.
+   * `facts` also pairs with `rules` — the vocabulary this layer already speaks.
+   */
+  withFacts: <C2 extends object>(
+    derive: (ctx: FieldsContext<F>) => C2,
   ) => FormDomainBuilder<F, C2, M, Id, S, R>
 
   /**
@@ -345,7 +351,7 @@ export interface FormDomainBuilder<
 
 /**
  * These extract the context and the rules from a builder that already has
- * `fields` and `computed`. They exist to solve the friction of splitting into
+ * `fields` and `facts`. They exist to solve the friction of splitting into
  * files: `rules.ts` imports the TYPE of the partial domain instead of trying to
  * reconstruct it, which would cause a circular import.
  */

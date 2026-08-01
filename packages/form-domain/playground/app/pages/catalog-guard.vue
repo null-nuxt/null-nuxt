@@ -9,8 +9,8 @@ const domain = useFormDomain('justica-federal')
 const sku: string = domain.meta.value.sku
 const price: number = domain.meta.value.price
 
-// computed específico deste domínio
-const isPF: boolean = domain.computed.value.isPF
+// fact específico deste domínio
+const isPF: boolean = domain.facts.value.isPF
 
 // @ts-expect-error slug que não existe entre os domínios descobertos
 useFormDomain('nao-existe')

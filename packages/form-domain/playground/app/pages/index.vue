@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { data, canShow, options, values, meta, computed: derivado, shape, reset } = useFormDomain('justica-federal')
+const { data, canShow, options, values, meta, facts, shape, reset } = useFormDomain('justica-federal')
 
 const camposNoSchema = computed(() => Object.keys(shape.value))
 </script>
@@ -58,7 +58,7 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
     <FormEcho />
 
     <div style="display:grid; gap:.4rem; background:#f4f4f5; padding:.8rem; border-radius:.4rem; font-size:.82rem">
-      <div><strong>computed</strong>: isPF={{ derivado.isPF }} · isPJ={{ derivado.isPJ }}</div>
+      <div><strong>facts</strong>: isPF={{ facts.isPF }} · isPJ={{ facts.isPJ }}</div>
       <div><strong>meta</strong>: {{ meta.sku }} — R$ {{ meta.price.toFixed(2) }}</div>
       <div>
         <strong>carrinho</strong>: {{ meta.resumo }}

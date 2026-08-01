@@ -3,8 +3,8 @@ import { string } from 'yup'
 
 /**
  * Fixture de tipos do builder. O motivo de o builder existir é a acumulação de
- * tipos: `rules`, `schema` e `meta` precisam enxergar o que `withComputed`
- * devolveu. Se essa acumulação regredir, `ctx.computed` vira `unknown`/`any`,
+ * tipos: `rules`, `schema` e `meta` precisam enxergar o que `withFacts`
+ * devolveu. Se essa acumulação regredir, `ctx.facts` vira `unknown`/`any`,
  * os `@ts-expect-error` ficam sem uso e o typecheck falha aqui.
  */
 const useDomain = createFormDomain('domain-guard')
@@ -12,26 +12,26 @@ const useDomain = createFormDomain('domain-guard')
     tipo: field<'PF' | 'PJ' | ''>({ label: 'Tipo', value: '' }),
     cpf: field({ label: 'CPF', value: '' }),
   })
-  .withComputed(ctx => ({
+  .withFacts(ctx => ({
     isPF: ctx.values.tipo === 'PF',
   }))
   .withRules({
-    // o computed do passo anterior chega tipado aqui
-    cpf: { canShow: ctx => ctx.computed.isPF, clearWhenHidden: true },
+    // os facts do passo anterior chegam tipados aqui
+    cpf: { canShow: ctx => ctx.facts.isPF, clearWhenHidden: true },
 
-    // @ts-expect-error computed que não foi declarado
-    tipo: { canShow: ctx => ctx.computed.naoExiste },
+    // @ts-expect-error fact que não foi declarado
+    tipo: { canShow: ctx => ctx.facts.naoExiste },
 
     // @ts-expect-error campo que não existe em fields
     sobrenome: { canShow: () => true },
   })
   .withSchema(ctx => ctx.shape({
-    cpf: ctx.computed.isPF ? string().required() : string().nullable(),
+    cpf: ctx.facts.isPF ? string().required() : string().nullable(),
 
     // @ts-expect-error validar campo que não existe em fields não faz sentido
     sobrenome: string().required(),
   }))
-  .withMeta(ctx => ({ price: ctx.computed.isPF ? 100 : 250 }))
+  .withMeta(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
   .build()
 
 /** `storeLabelIn` só aceita outro campo do próprio domínio. */

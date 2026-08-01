@@ -118,25 +118,25 @@ than fields — business rules, price, sku — use `createFormDomain`:
 ```ts
 createFormDomain('federal-court')
   .withFields({ person_type: field<PersonType>({ label: 'Type', value: '' }), ssn: ... })
-  .withComputed(ctx => ({ isIndividual: ctx.values.person_type === 'individual' }))
+  .withFacts(ctx => ({ isIndividual: ctx.values.person_type === 'individual' }))
   .withRules({
-    ssn: { canShow: ctx => ctx.computed.isIndividual },
-    region: { options: ctx => ctx.computed.isIndividual ? REGIONS_A : REGIONS_B },
+    ssn: { canShow: ctx => ctx.facts.isIndividual },
+    region: { options: ctx => ctx.facts.isIndividual ? REGIONS_A : REGIONS_B },
     person_type: { onChange: (_value, ctx) => ctx.patch({ region: '' }) },
   })
   .withSchema(ctx => ctx.shape({ /* ... */ }))
-  .withMeta(ctx => ({ sku: ctx.computed.isIndividual ? 'A' : 'B' }))
+  .withMeta(ctx => ({ sku: ctx.facts.isIndividual ? 'A' : 'B' }))
   .build()
 ```
 
 ### Why a builder and not a plain object
 
 Not aesthetics. In a single object literal TypeScript infers every property at
-once, and `rules` **could not see** the inferred type of `computed`. Each
+once, and `rules` **could not see** the inferred type of `facts`. Each
 `.withX()` returns a new type carrying what has accumulated so far — the same
 reason tRPC, Zod and Kysely use builders.
 
-### `computed` is the center
+### `facts` is the center
 
 The business rule exists once and is consumed by rules, schema and meta.
 Without it, the same condition ends up written twice — once in the field's
@@ -169,7 +169,7 @@ When you need the context, use `ctx.shape()`:
 
 ```ts
 .withSchema(ctx => ctx.shape({
-  region: ctx.computed.isBusiness ? string().required() : string().nullable(),
+  region: ctx.facts.isBusiness ? string().required() : string().nullable(),
 }))
 ```
 
@@ -236,7 +236,7 @@ schema earns its place:
   ssn: string().required().length(11),
 
   // always visible, required only for businesses — visibility can't express this
-  region: ctx.computed.isBusiness ? string().required() : string().nullable(),
+  region: ctx.facts.isBusiness ? string().required() : string().nullable(),
 }))
 ```
 
@@ -336,8 +336,8 @@ field:
 
 ```ts
 rules: {
-  ssn: { canShow: ctx => ctx.computed.isIndividual, clearWhenHidden: true },
-  ein: { canShow: ctx => ctx.computed.isBusiness, clearWhenHidden: true },
+  ssn: { canShow: ctx => ctx.facts.isIndividual, clearWhenHidden: true },
+  ein: { canShow: ctx => ctx.facts.isBusiness, clearWhenHidden: true },
 }
 ```
 
@@ -409,12 +409,12 @@ Under SSR, instances live on the request's app, never in a module variable.
 
 ## Splitting into files
 
-`fields` and `computed` stay together (they're the source of the types); the
+`fields` and `facts` stay together (they're the source of the types); the
 rest moves out:
 
 ```
 forms/federal-court/
-├── domain.ts   → createFormDomain().withFields().withComputed()
+├── domain.ts   → createFormDomain().withFields().withFacts()
 ├── rules.ts    → RulesOf<Base>
 ├── schema.ts   → SchemaOf<Base>
 ├── meta.ts     → MetaOf<Base, MyMeta>
@@ -447,7 +447,7 @@ instantiates all of them — the inherent cost of listing.
 |---|---|
 | `rules` referencing a field that doesn't exist | **compile time** |
 | `schema` validating a field that doesn't exist | **compile time** |
-| `ctx.computed` with an undeclared key | **compile time** |
+| `ctx.facts` with an undeclared key | **compile time** |
 | `set()` with a wrong field or type | **compile time** |
 | `meta` with a key that doesn't exist | **compile time** |
 | `useFormDomain('unknown-slug')` | **compile time** |
@@ -468,7 +468,7 @@ const form = useMyDomain()
 form.id          // slug, as a literal type
 form.data        // reactive: { field: { key, label, value, mask? } }
 form.values      // plain values
-form.computed    // derived business rules
+form.facts    // derived business rules
 form.canShow     // { field: boolean } — a field with no rule is visible
 form.options     // effective options per field
 form.selected    // the selected option — where the friendly label comes from

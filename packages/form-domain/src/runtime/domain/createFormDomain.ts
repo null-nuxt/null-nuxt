@@ -18,7 +18,7 @@ import type {
 interface Definition {
   id: string
   fields: FieldsDef
-  compute?: (ctx: unknown) => Record<string, unknown>
+  derive?: (ctx: unknown) => Record<string, unknown>
   rules?: DomainRules<FieldsDef, unknown>
   schema?: DomainSchema<FieldsDef, unknown>
   meta?: DomainMeta<FieldsDef, unknown, Record<string, unknown>>
@@ -51,12 +51,12 @@ function createInstance(definition: Definition) {
     })
 
     /**
-     * The domain's `computed`: the business rule exists ONCE and is consumed by
-     * rules, schema and meta. It's what avoids the same condition written twice
+     * The domain's `facts`: the conclusion exists ONCE and is consumed by rules,
+     * schema, outcome and payload. It avoids the same condition written twice
      * — once as a visibility rule, once in the schema's `.when()`.
      */
-    const domainComputed = computed(() =>
-      definition.compute ? definition.compute(baseContext) : {},
+    const domainFacts = computed(() =>
+      definition.derive ? definition.derive(baseContext) : {},
     )
 
     const baseContext = {
@@ -75,8 +75,8 @@ function createInstance(definition: Definition) {
       get data() {
         return data
       },
-      get computed() {
-        return domainComputed.value
+      get facts() {
+        return domainFacts.value
       },
     }
 
@@ -260,7 +260,7 @@ function createInstance(definition: Definition) {
       // refs, not getters: destructuring a getter copies the value and kills
       // reactivity — and destructuring is how composables are used in Vue
       values,
-      computed: domainComputed,
+      facts: domainFacts,
       canShow,
       options,
       selected,
@@ -313,7 +313,7 @@ export const registeredDomains = () => factories
 /**
  * Declares a form domain: fields, derived business rules, behaviour rules,
  * schema and metadata — each in its own layer, all speaking the same language
- * through `computed`.
+ * through `facts`.
  */
 export function createFormDomain<const Id extends string>(
   id: Id,
@@ -325,8 +325,8 @@ export function createFormDomain<const Id extends string>(
       definition.fields = fields
       return builder
     },
-    withComputed(compute: (ctx: unknown) => Record<string, unknown>) {
-      definition.compute = compute
+    withFacts(derive: (ctx: unknown) => Record<string, unknown>) {
+      definition.derive = derive
       return builder
     },
     withRules(rules: DomainRules<FieldsDef, unknown>) {

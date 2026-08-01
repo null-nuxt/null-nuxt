@@ -14,7 +14,7 @@ const build = (id: string, onChangeSpy = vi.fn()) =>
       cnpj: field({ label: 'CNPJ', value: '' }),
       regiao: field({ label: 'Região', value: '', options: [{ label: 'Sul', value: 'sul' }] }),
     })
-    .withComputed(ctx => ({
+    .withFacts(ctx => ({
       isPF: ctx.values.tipo_pessoa === 'PF',
       isPJ: ctx.values.tipo_pessoa === 'PJ',
     }))
@@ -25,10 +25,10 @@ const build = (id: string, onChangeSpy = vi.fn()) =>
           ctx.patch(value === 'PF' ? { cnpj: '' } : { cpf: '' })
         },
       },
-      cpf: { canShow: ctx => ctx.computed.isPF },
-      cnpj: { canShow: ctx => ctx.computed.isPJ },
+      cpf: { canShow: ctx => ctx.facts.isPF },
+      cnpj: { canShow: ctx => ctx.facts.isPJ },
       regiao: {
-        options: ctx => ctx.computed.isPF
+        options: ctx => ctx.facts.isPF
           ? [{ label: 'Sul', value: 'sul' }, { label: 'Norte', value: 'norte' }]
           : [{ label: 'Único', value: 'unico' }],
       },
@@ -37,26 +37,26 @@ const build = (id: string, onChangeSpy = vi.fn()) =>
       cpf: string().required('CPF obrigatório'),
       cnpj: string().required('CNPJ obrigatório'),
     })
-    .withMeta(ctx => ({ price: ctx.computed.isPF ? 100 : 250 }))
+    .withMeta(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
     .build()
 
-describe('computed compartilhado', () => {
+describe('facts compartilhado', () => {
   /**
-   * O ponto da camada `computed`: a condição de negócio existe uma vez e é
+   * O ponto da camada `facts`: a condição de negócio existe uma vez e é
    * consumida por rules, schema e meta. Antes ela vivia duplicada entre o
    * `canShow` e o `.when()` do schema.
    */
   it('alimenta canShow, options e meta da mesma fonte', async () => {
     const form = build('compartilhado')()
 
-    expect(form.computed.value.isPF).toBe(false)
+    expect(form.facts.value.isPF).toBe(false)
     expect(form.canShow.value.cpf).toBe(false)
     expect(form.meta.value.price).toBe(250)
 
     form.data.tipo_pessoa.value = 'PF'
     await nextTick()
 
-    expect(form.computed.value.isPF).toBe(true)
+    expect(form.facts.value.isPF).toBe(true)
     expect(form.canShow.value.cpf).toBe(true)
     expect(form.canShow.value.cnpj).toBe(false)
     expect(form.meta.value.price).toBe(100)
@@ -169,11 +169,11 @@ describe('limpeza do campo escondido', () => {
         cnpj: field({ label: 'CNPJ', value: '' }),
         obs: field({ label: 'Observação', value: '' }),
       })
-      .withComputed(ctx => ({ isPF: ctx.values.tipo === 'PF', isPJ: ctx.values.tipo === 'PJ' }))
+      .withFacts(ctx => ({ isPF: ctx.values.tipo === 'PF', isPJ: ctx.values.tipo === 'PJ' }))
       .withRules({
-        cpf: { canShow: ctx => ctx.computed.isPF, clearWhenHidden: true },
-        cnpj: { canShow: ctx => ctx.computed.isPJ, clearWhenHidden: true },
-        obs: { canShow: ctx => ctx.computed.isPF },
+        cpf: { canShow: ctx => ctx.facts.isPF, clearWhenHidden: true },
+        cnpj: { canShow: ctx => ctx.facts.isPJ, clearWhenHidden: true },
+        obs: { canShow: ctx => ctx.facts.isPF },
       })
       .build()
 
@@ -238,10 +238,10 @@ describe('option escolhida', () => {
         tipo: field<Pessoa>({ label: 'Tipo', value: '' }),
         regiao: field({ label: 'Região', value: '' }),
       })
-      .withComputed(ctx => ({ isPF: ctx.values.tipo === 'PF' }))
+      .withFacts(ctx => ({ isPF: ctx.values.tipo === 'PF' }))
       .withRules({
         regiao: {
-          options: ctx => ctx.computed.isPF
+          options: ctx => ctx.facts.isPF
             ? [{ label: '1ª Região', value: 'primeira' }]
             : [{ label: 'Nacional', value: 'primeira' }],
         },
@@ -461,9 +461,9 @@ describe('schema dependente do contexto', () => {
         tipo: field<Pessoa>({ label: 'Tipo', value: '' }),
         regiao: field({ label: 'Região', value: '' }),
       })
-      .withComputed(ctx => ({ isPJ: ctx.values.tipo === 'PJ' }))
+      .withFacts(ctx => ({ isPJ: ctx.values.tipo === 'PJ' }))
       .withSchema(ctx => ctx.shape({
-        regiao: ctx.computed.isPJ
+        regiao: ctx.facts.isPJ
           ? string().required('PJ precisa informar a região')
           : string().nullable(),
       }))
@@ -488,9 +488,9 @@ describe('coerência entre options e schema', () => {
   const REGIOES_PF = [{ label: '1ª', value: 'primeira' }]
   const REGIOES_PJ = [{ label: 'Nacional', value: 'nacional' }]
 
-  const regioesDe = (ctx: { computed: { isPF: boolean, isPJ: boolean } }) => {
-    if (ctx.computed.isPF) return REGIOES_PF
-    if (ctx.computed.isPJ) return REGIOES_PJ
+  const regioesDe = (ctx: { facts: { isPF: boolean, isPJ: boolean } }) => {
+    if (ctx.facts.isPF) return REGIOES_PF
+    if (ctx.facts.isPJ) return REGIOES_PJ
     return []
   }
 
@@ -500,13 +500,13 @@ describe('coerência entre options e schema', () => {
         tipo: field<Pessoa>({ label: 'Tipo', value: '' }),
         regiao: field({ label: 'Região', value: '' }),
       })
-      .withComputed(ctx => ({ isPF: ctx.values.tipo === 'PF', isPJ: ctx.values.tipo === 'PJ' }))
+      .withFacts(ctx => ({ isPF: ctx.values.tipo === 'PF', isPJ: ctx.values.tipo === 'PJ' }))
       .withRules({
         // região continua VISÍVEL ao trocar de tipo, então canShow não resolve:
         // o que mudou foi o conjunto de valores aceitos
         tipo: { onChange: (_value, ctx) => ctx.patch({ regiao: '' }) },
         regiao: {
-          canShow: ctx => ctx.computed.isPF || ctx.computed.isPJ,
+          canShow: ctx => ctx.facts.isPF || ctx.facts.isPJ,
           options: regioesDe,
         },
       })

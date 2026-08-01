@@ -16,8 +16,8 @@ const REGIOES_PJ = [{ label: 'Nacional', value: 'nacional' }]
  * "é PJ" é o mesmo erro do `else` que a limpeza manual cometia.
  */
 export const regioesDe = (ctx: ContextOf<Base>) => {
-  if (ctx.computed.isPF) return REGIOES_PF
-  if (ctx.computed.isPJ) return REGIOES_PJ
+  if (ctx.facts.isPF) return REGIOES_PF
+  if (ctx.facts.isPJ) return REGIOES_PJ
   return []
 }
 

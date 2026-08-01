@@ -26,9 +26,9 @@ const { register, canShow, values, validate } = createFormDomain('dados-do-solic
     cpf: field({ label: 'CPF*', value: '', mask: 'cpf' }),
     cnpj: field({ label: 'CNPJ*', value: '', mask: 'cnpj' }),
   })
-  .withComputed(ctx => ({ isPF: ctx.values.type === 'PF' }))
+  .withFacts(ctx => ({ isPF: ctx.values.type === 'PF' }))
   .withRules({
-    cpf: { canShow: ctx => ctx.computed.isPF, clearWhenHidden: true },
+    cpf: { canShow: ctx => ctx.facts.isPF, clearWhenHidden: true },
     cnpj: { canShow: ctx => ctx.values.type === 'PJ', clearWhenHidden: true },
   })
   .withSchema({

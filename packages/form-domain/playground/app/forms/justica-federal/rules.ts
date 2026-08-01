@@ -22,12 +22,12 @@ export const rules: RulesOf<Base> = {
    * `clearWhenHidden` porque estes campos somem de fato: a condição já está no
    * `canShow` e repeti-la numa limpeza manual erraria o estado vazio.
    */
-  cpf: { canShow: ctx => ctx.computed.isPF, clearWhenHidden: true },
-  cnpj: { canShow: ctx => ctx.computed.isPJ, clearWhenHidden: true },
+  cpf: { canShow: ctx => ctx.facts.isPF, clearWhenHidden: true },
+  cnpj: { canShow: ctx => ctx.facts.isPJ, clearWhenHidden: true },
 
   regiao: {
     // sem tipo escolhido não há região que faça sentido
-    canShow: ctx => ctx.computed.isPF || ctx.computed.isPJ,
+    canShow: ctx => ctx.facts.isPF || ctx.facts.isPJ,
     options: regioesDe,
 
     /**

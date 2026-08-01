@@ -19,8 +19,8 @@ export interface CertidaoMeta {
  */
 export const meta: MetaOf<Base, CertidaoMeta> = ctx => ({
   titulo: 'Certidão Negativa Criminal — Justiça Federal',
-  sku: ctx.computed.isPF ? 'CNC-JF-PF' : 'CNC-JF-PJ',
-  price: ctx.computed.isPF ? 59.9 : 89.9,
+  sku: ctx.facts.isPF ? 'CNC-JF-PF' : 'CNC-JF-PJ',
+  price: ctx.facts.isPF ? 59.9 : 89.9,
   resumo: ctx.selected.regiao
     ? `Região: ${ctx.selected.regiao.label}`
     : 'Região não selecionada',
