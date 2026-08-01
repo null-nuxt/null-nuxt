@@ -3,6 +3,19 @@ import type { ComputedRef } from 'vue'
 import type { ValidationResult } from '../standard'
 import type { FieldsDef, FormData, FormValues, OnlyKnownKeys } from '../types'
 
+/** Flattens an intersection so hovers and errors show one object, not a chain. */
+type Prettify<T> = { [K in keyof T]: T[K] } & {}
+
+/**
+ * The rule declared for `K`, or `object` when there is none.
+ *
+ * `object` rather than `never` on purpose: `never` is assignable to everything
+ * and `keyof never` is every key, so both of the obvious fallbacks would make
+ * every `'x' extends keyof RuleFor<...>` check silently pass. `keyof object` is
+ * `never`, which answers "declares nothing" correctly.
+ */
+type RuleFor<R, K extends PropertyKey> = K extends keyof R ? NonNullable<R[K]> : object
+
 /** Context available already in `withComputed`: only what came from `fields`. */
 export interface FieldsContext<F extends FieldsDef> {
   values: FormValues<F>
@@ -127,7 +140,8 @@ export type DomainSchemaShape<F extends FieldsDef> = {
  * argument to a helper makes the check work again.
  */
 export interface SchemaContext<F extends FieldsDef, C> extends DomainContext<F, C> {
-  shape: <T>(fields: T & DomainSchemaShape<F> & OnlyKnownKeys<T, keyof F & string>) => DomainSchemaShape<F>
+  /** Returns `T`, not the erased shape, so the declared validator types survive. */
+  shape: <T>(fields: T & DomainSchemaShape<F> & OnlyKnownKeys<T, keyof F & string>) => T
 }
 
 export type DomainSchema<F extends FieldsDef, C> =
@@ -139,29 +153,71 @@ export type DomainMeta<F extends FieldsDef, C, M> =
   | ((ctx: MetaContext<F, C>) => M)
 
 /**
- * What an input component needs to receive. Optional fields only appear when
- * they exist — `v-bind` of a key the component doesn't declare would land as a
- * DOM attribute.
+ * The extras an input may receive. All optional: the engine only emits the ones
+ * that have a value at runtime, because `v-bind` of a key the component doesn't
+ * declare lands as a stray DOM attribute.
  */
-export interface FieldBindings<TValue> {
-  name: string
-  label: string
-  modelValue: TValue
-  /**
-   * The parameter is widened with `| undefined` deliberately. A component
-   * declaring `defineModel<string>()` emits `string | undefined`, and under
-   * `strictFunctionTypes` a handler taking only `string` is NOT assignable to
-   * that — `v-bind="register('x')"` would fail to compile on the single most
-   * common way to write an input.
-   *
-   * The widening costs nothing in the other direction: a component that emits
-   * a non-optional value still accepts a handler that tolerates `undefined`.
-   */
-  'onUpdate:modelValue': (value: TValue | undefined) => void
+interface FieldExtras<TValue> {
   options?: ReadonlyArray<FieldOption<TValue>>
   placeholder?: string
   mask?: string
 }
+
+/**
+ * Which extras this field can produce AT ALL. A key nobody declared is absent
+ * from the bindings rather than optional — that's the difference between
+ * `register('username').options` being `undefined` and being a compile error on
+ * a field that has no options.
+ *
+ * `options` has two sources: the static list in `fields` and the derived one in
+ * `rules`, which is why the rules type has to travel this far.
+ */
+type DeclaredExtras<F extends FieldsDef, R, K extends keyof F> =
+  | ('options' extends keyof F[K] ? 'options' : never)
+  | ('options' extends keyof RuleFor<R, K> ? 'options' : never)
+  | ('placeholder' extends keyof F[K] ? 'placeholder' : never)
+  | ('mask' extends keyof F[K] ? 'mask' : never)
+
+/** What an input component receives from `register(key)`. */
+export type FieldBindings<F extends FieldsDef, R, K extends keyof F & string> = Prettify<
+  {
+    name: K
+    label: string
+    modelValue: F[K]['value']
+    /**
+     * The parameter is widened with `| undefined` deliberately. A component
+     * declaring `defineModel<string>()` emits `string | undefined`, and under
+     * `strictFunctionTypes` a handler taking only `string` is NOT assignable to
+     * that — `v-bind="register('x')"` would fail to compile on the single most
+     * common way to write an input.
+     *
+     * The widening costs nothing in the other direction: a component that emits
+     * a non-optional value still accepts a handler that tolerates `undefined`.
+     */
+    'onUpdate:modelValue': (value: F[K]['value'] | undefined) => void
+  }
+  & Pick<FieldExtras<F[K]['value']>, DeclaredExtras<F, R, K>>
+>
+
+/**
+ * The keys the runtime may drop from `shape`, which is exactly the fields a
+ * `canShow` rule can hide.
+ */
+type HidableKeys<S, R> = { [K in keyof S]: 'canShow' extends keyof RuleFor<R, K> ? K : never }[keyof S]
+
+/**
+ * `shape` keeps the validator types the project declared instead of collapsing
+ * them to `StandardSchemaV1`. That is what lets the result be composed —
+ * `object(form.shape)`, `z.object(form.shape)` — since those functions require
+ * their own library's schema type, which the erased version no longer was.
+ *
+ * Only the hidable keys become optional. Marking all of them optional would
+ * defeat the point: yup and zod both reject a `Schema | undefined` value, so a
+ * fully `Partial` shape stops composing.
+ */
+export type ResolvedShape<S, R> = Prettify<
+  Omit<S, HidableKeys<S, R>> & Partial<Pick<S, HidableKeys<S, R>>>
+>
 
 /**
  * Derived state is exposed as `ComputedRef` rather than a getter, because
@@ -169,7 +225,14 @@ export interface FieldBindings<TValue> {
  * getter copies the value once and silently kills reactivity. With a ref,
  * forgetting `.value` is a type error instead of a frozen screen.
  */
-export interface FormDomainInstance<F extends FieldsDef, C, M, Id extends string = string> {
+export interface FormDomainInstance<
+  F extends FieldsDef,
+  C,
+  M,
+  Id extends string = string,
+  S = object,
+  R = object,
+> {
   /** The literal is preserved: it's what lets `useFormDomain('slug')` type its return. */
   id: Id
   /** Reactive object: this is where `v-model` writes. */
@@ -183,11 +246,11 @@ export interface FormDomainInstance<F extends FieldsDef, C, M, Id extends string
   /** The selected option per field — where the friendly text comes from. */
   selected: ComputedRef<SelectedOptions<F>>
   /**
-   * Validators for the VISIBLE fields. Handed over like this so the project can
-   * compose whatever its library expects: `object(form.shape)`,
-   * `z.object(form.shape)`...
+   * Validators for the VISIBLE fields, with the types the project declared.
+   * Handed over like this so it can be composed into whatever the project's
+   * library expects: `object(form.shape)`, `z.object(form.shape)`...
    */
-  shape: ComputedRef<Partial<Record<keyof F & string, StandardSchemaV1>>>
+  shape: ComputedRef<ResolvedShape<S, R>>
   /** Validates only what's visible. Hidden fields aren't required. */
   validate: () => Promise<ValidationResult<FormValues<F>>>
   meta: ComputedRef<M>
@@ -195,7 +258,7 @@ export interface FormDomainInstance<F extends FieldsDef, C, M, Id extends string
   reset: () => void
   dispose: () => void
   /** Ready-made input props: `<Input v-bind="form.register('email')" />`. */
-  register: <K extends keyof F & string>(key: K) => FieldBindings<F[K]['value']>
+  register: <K extends keyof F & string>(key: K) => FieldBindings<F, R, K>
 }
 
 /**
@@ -204,42 +267,57 @@ export interface FormDomainInstance<F extends FieldsDef, C, M, Id extends string
  * the inferred type of `computed`. Each `.withX()` returns a new type carrying
  * what has accumulated so far.
  */
-export interface FormDomainBuilder<F extends FieldsDef, C, M, Id extends string = string> {
-  withFields: <F2 extends FieldsDef>(fields: F2) => FormDomainBuilder<F2, C, M, Id>
+export interface FormDomainBuilder<
+  F extends FieldsDef,
+  C,
+  M,
+  Id extends string = string,
+  S = object,
+  R = object,
+> {
+  withFields: <F2 extends FieldsDef>(fields: F2) => FormDomainBuilder<F2, C, M, Id, S, R>
 
   withComputed: <C2 extends object>(
     compute: (ctx: FieldsContext<F>) => C2,
-  ) => FormDomainBuilder<F, C2, M, Id>
+  ) => FormDomainBuilder<F, C2, M, Id, S, R>
 
-  withRules: <R>(
-    rules: R & DomainRules<F, C> & OnlyKnownKeys<R, keyof F & string>,
-  ) => FormDomainBuilder<F, C, M, Id>
+  /**
+   * `R2` is carried forward, not discarded: `register()` needs to know whether a
+   * field has derived options, and `shape` needs to know which fields a
+   * `canShow` can hide.
+   */
+  withRules: <R2>(
+    rules: R2 & DomainRules<F, C> & OnlyKnownKeys<R2, keyof F & string>,
+  ) => FormDomainBuilder<F, C, M, Id, S, R2>
 
   /**
    * The same double defence as `rules`, for the same reason: with a union target
    * TypeScript's excess property check doesn't fire, so `OnlyKnownKeys` marks
    * the unknown key as `never`. That's what prevents declaring validation for a
    * field that doesn't exist.
+   *
+   * Both forms capture the declared validator types so `shape` can hand them
+   * back intact instead of as bare `StandardSchemaV1`.
    */
   withSchema: {
-    <S>(
-      shape: S & DomainSchemaShape<NoInfer<F>> & OnlyKnownKeys<S, keyof F & string>,
-    ): FormDomainBuilder<F, C, M, Id>
-    (
-      build: (ctx: SchemaContext<F, C>) => DomainSchemaShape<F>,
-    ): FormDomainBuilder<F, C, M, Id>
+    <S2>(
+      shape: S2 & DomainSchemaShape<NoInfer<F>> & OnlyKnownKeys<S2, keyof F & string>,
+    ): FormDomainBuilder<F, C, M, Id, S2, R>
+    <S2 extends DomainSchemaShape<F>>(
+      build: (ctx: SchemaContext<F, C>) => S2,
+    ): FormDomainBuilder<F, C, M, Id, S2, R>
   }
 
   withMeta: <M2 extends object>(
     meta: DomainMeta<F, C, M2>,
-  ) => FormDomainBuilder<F, C, M2, Id>
+  ) => FormDomainBuilder<F, C, M2, Id, S, R>
 
   /**
    * Ends the type accumulation and returns the domain's composable, registered
    * by slug: every caller receives the SAME instance. This is the path for
    * domains under `<srcDir>/forms`.
    */
-  build: () => () => FormDomainInstance<F, C, M, Id>
+  build: () => () => FormDomainInstance<F, C, M, Id, S, R>
 
   /**
    * A LOCAL instance, created on the spot — for a simple form declared inside
@@ -248,7 +326,7 @@ export interface FormDomainBuilder<F extends FieldsDef, C, M, Id extends string 
    *
    * Watchers are bound to the caller's scope and die with it.
    */
-  use: () => FormDomainInstance<F, C, M, Id>
+  use: () => FormDomainInstance<F, C, M, Id, S, R>
 }
 
 /**
@@ -257,11 +335,11 @@ export interface FormDomainBuilder<F extends FieldsDef, C, M, Id extends string 
  * files: `rules.ts` imports the TYPE of the partial domain instead of trying to
  * reconstruct it, which would cause a circular import.
  */
-export type ContextOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id>
+export type ContextOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
   ? DomainContext<F, C>
   : never
 
-export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id>
+export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
   ? DomainRules<F, C>
   : never
 
@@ -270,10 +348,10 @@ export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M,
  * would stop `withSchema`'s overloads from picking the right signature. The
  * unknown-key check happens here, at the declaration.
  */
-export type SchemaOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id>
+export type SchemaOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
   ? (ctx: SchemaContext<F, C>) => DomainSchemaShape<F>
   : never
 
-export type MetaOf<B, M extends object> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id>
+export type MetaOf<B, M extends object> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
   ? DomainMeta<F, C, M>
   : never

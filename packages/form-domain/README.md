@@ -69,6 +69,23 @@ It provides `name`, `label`, `modelValue` and the `update:modelValue` handler,
 plus `options`, `placeholder` and `mask` **only when the field has them** — a
 key the component doesn't declare would end up as a stray DOM attribute.
 
+"Only when the field has them" is a statement about the **type**, not just the
+runtime object. A field declared without options has no `options` key at all in
+its bindings, so reading it is a compile error rather than `undefined`:
+
+```ts
+.withFields({
+  username: field({ label: 'Username', value: '' }),
+  profile: field({ label: 'Profile', value: '', options: [/* ... */] }),
+})
+
+form.register('profile').options   // ok
+form.register('username').options  // ✗ this field declares no options
+```
+
+Derived options count as declaring them: a field whose `options` come from
+`rules` gets the key too.
+
 The handler accepts `TValue | undefined`, not just `TValue`. That's not
 sloppiness — a component written the ordinary way emits the wider type:
 
@@ -168,7 +185,24 @@ const { valid, errors, firstErrors } = await form.validate()
 
 Validates **only the visible fields**. If your form library needs a composed
 schema, `form.shape` gives you the visible validators to compose:
-`object(form.shape)`, `z.object(form.shape)`.
+
+```ts
+const schema = computed(() => object(form.shape.value))
+```
+
+`shape` hands back the validator types **you declared**, not an erased
+`StandardSchemaV1` — that's what makes `object()` and `z.object()` accept it,
+since both demand their own library's schema type.
+
+A key is optional in `shape` only when a `canShow` rule can hide it, which is
+exactly when the runtime may drop it. Marking every key optional would be the
+easy way out and would break the composition above: yup and zod both reject a
+`Schema | undefined` value.
+
+Splitting the schema into its own file through `SchemaOf` is the one case that
+still erases the types — the annotation is what the compiler sees, so it can't
+recover more than `SchemaOf` promises. Compose from `validate()` there, or
+declare the schema inline.
 
 ### Hidden fields are not validated
 
@@ -401,6 +435,8 @@ instantiates all of them — the inherent cost of listing.
 | `meta` with a key that doesn't exist | **compile time** |
 | `useFormDomain('unknown-slug')` | **compile time** |
 | `storeLabelIn` pointing at a missing field, or at itself | **compile time** |
+| `register()` reading an extra the field never declared | **compile time** |
+| an option whose value doesn't match the field's | **compile time** |
 | `onChange` patching a field that doesn't exist | ignored at runtime |
 
 The last one is a known limitation — the generic that validates `rules` keys
@@ -419,7 +455,7 @@ form.computed    // derived business rules
 form.canShow     // { field: boolean } — a field with no rule is visible
 form.options     // effective options per field
 form.selected    // the selected option — where the friendly label comes from
-form.shape       // validators for visible fields
+form.shape       // visible validators, with the types you declared
 form.validate()  // validates visible fields only
 form.meta        // metadata, reactive when declared as a function
 form.register(k) // ready-made input props

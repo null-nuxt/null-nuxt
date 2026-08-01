@@ -8,10 +8,12 @@ export type {
   DomainMeta,
   DomainRules,
   DomainSchema,
+  FieldBindings,
   FieldOption,
   FormDomainBuilder,
   FormDomainInstance,
   MetaOf,
+  ResolvedShape,
   RulesOf,
   SchemaOf,
 } from './domain/types'

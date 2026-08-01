@@ -15,6 +15,23 @@ independently.
   `strictFunctionTypes` a handler taking only `string` is not assignable to it —
   `v-bind="form.register('name')"` failed to compile on the most common way to
   write an input.
+- **`shape` keeps the validator types the project declared** instead of erasing
+  them to `StandardSchemaV1`, so `object(form.shape.value)` and
+  `z.object(form.shape.value)` compile. Composing was the documented purpose of
+  `shape` and it did not typecheck. A key is optional only when a `canShow` rule
+  can hide it: an all-optional shape is what those functions reject.
+
+### `@null-nuxt/form-domain` — Changed
+
+- **`register()` is typed per field.** `options`, `placeholder` and `mask` are
+  absent from the bindings unless the field (or, for options, a rule) declares
+  them, so reading one that doesn't exist is a compile error rather than
+  `undefined`. `field()` now returns the definition as written to make that
+  possible; the guarantee that an option's value matches the field's is
+  unchanged.
+- `FormDomainBuilder` and `FormDomainInstance` carry two further type
+  parameters, for the schema and the rules. Both default, so annotations that
+  named the previous four keep working.
 
 ## [0.1.0] — 2026-07-31
 
