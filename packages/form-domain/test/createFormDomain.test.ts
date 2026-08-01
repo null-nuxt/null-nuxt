@@ -134,6 +134,30 @@ describe('campo escondido não é validado', () => {
     // cpf está escondido: nem valida nem bloqueia
     expect((await form.validate()).valid).toBe(true)
   })
+
+  /**
+   * A razão de `composeSchema` existir: quem compõe na mão fora de um
+   * `computed` congela o schema no primeiro valor, e aí o campo que o
+   * `canShow` escondeu depois continua exigido.
+   */
+  it('composeSchema recompõe quando a visibilidade muda', async () => {
+    const form = build('hidden-compose')()
+    const composto = form.composeSchema(shape => Object.keys(shape))
+
+    expect(composto.value).not.toContain('cpf')
+
+    form.data.tipo_pessoa.value = 'PF'
+    await nextTick()
+
+    expect(composto.value).toContain('cpf')
+  })
+
+  it('composeSchema entrega os validadores declarados, não uma cópia vazia', () => {
+    const form = build('hidden-compose-conteudo')()
+    const composto = form.composeSchema(shape => shape)
+
+    expect(composto.value).toBe(form.shape.value)
+  })
 })
 
 describe('limpeza do campo escondido', () => {

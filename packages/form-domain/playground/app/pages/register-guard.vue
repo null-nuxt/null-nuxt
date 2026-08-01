@@ -8,7 +8,7 @@ import { object, string } from 'yup'
  * one stops erroring, the directive goes unused and typecheck fails.
  */
 
-const { register, shape } = createFormDomain('register-guard')
+const { register, shape, composeSchema } = createFormDomain('register-guard')
   .withFields({
     username: field({ label: 'Username', value: '' }),
     profile: field({
@@ -29,7 +29,14 @@ const { register, shape } = createFormDomain('register-guard')
  * own schema type. With the types erased to `StandardSchemaV1` this line was
  * the error every consuming project hit first.
  */
-const validation = computed(() => object(shape.value))
+const byHand = computed(() => object(shape.value))
+
+/** The same thing, with the reactivity already taken care of. */
+const validation = composeSchema(object)
+
+/** The composed result keeps yup's own type — `describe()` is not on a shape. */
+void byHand.value.describe
+void validation.value.describe
 
 /**
  * No `canShow` rule in this domain, so nothing can drop out of `shape` and the

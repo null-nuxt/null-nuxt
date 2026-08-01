@@ -251,6 +251,20 @@ export interface FormDomainInstance<
    * library expects: `object(form.shape)`, `z.object(form.shape)`...
    */
   shape: ComputedRef<ResolvedShape<S, R>>
+  /**
+   * The same validators, already handed to the project's own combinator and
+   * already reactive: `form.composeSchema(object)`, `form.composeSchema(z.object)`.
+   *
+   * It exists because the reactive part is the easy part to get wrong.
+   * Composing by hand outside a `computed` freezes the schema at its first
+   * value, so a field that `canShow` hides later stays required — a bug that
+   * only shows up on the branch of the form that hides something, which is the
+   * branch nobody tests first.
+   *
+   * Call it once in `setup`, like any other composable: each call builds its
+   * own `computed`.
+   */
+  composeSchema: <T>(combine: (shape: ResolvedShape<S, R>) => T) => ComputedRef<T>
   /** Validates only what's visible. Hidden fields aren't required. */
   validate: () => Promise<ValidationResult<FormValues<F>>>
   meta: ComputedRef<M>

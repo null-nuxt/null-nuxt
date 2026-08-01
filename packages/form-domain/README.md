@@ -183,16 +183,33 @@ Passed as a direct argument, the check works again.
 const { valid, errors, firstErrors } = await form.validate()
 ```
 
-Validates **only the visible fields**. If your form library needs a composed
-schema, `form.shape` gives you the visible validators to compose:
+Validates **only the visible fields**. If your form library wants a composed
+schema instead, hand it your library's combinator:
 
 ```ts
-const schema = computed(() => object(form.shape.value))
+const schema = form.composeSchema(object)    // yup
+const schema = form.composeSchema(z.object)  // zod
 ```
 
-`shape` hands back the validator types **you declared**, not an erased
-`StandardSchemaV1` — that's what makes `object()` and `z.object()` accept it,
-since both demand their own library's schema type.
+You get a `ComputedRef` of whatever the combinator returns — yup's own
+`ObjectSchema`, zod's own `ZodObject` — ready for `useForm({ validationSchema: schema })`.
+
+Which library composes stays your call; the module has no idea which one is
+right. What isn't your call is the **reactivity**, and that's why this is a
+method instead of a line in your component:
+
+```ts
+// ✗ frozen at the first value: a field canShow hides later stays required
+const schema = object(form.shape.value)
+```
+
+That bug only shows up on the branch of the form that hides something — the
+branch nobody tests first.
+
+`form.shape` is still there when you want the parts. It hands back the
+validator types **you declared**, not an erased `StandardSchemaV1` — that's what
+makes `object()` and `z.object()` accept it, since both demand their own
+library's schema type.
 
 A key is optional in `shape` only when a `canShow` rule can hide it, which is
 exactly when the runtime may drop it. Marking every key optional would be the
@@ -456,6 +473,7 @@ form.canShow     // { field: boolean } — a field with no rule is visible
 form.options     // effective options per field
 form.selected    // the selected option — where the friendly label comes from
 form.shape       // visible validators, with the types you declared
+form.composeSchema(object) // the same, composed by your library, reactive
 form.validate()  // validates visible fields only
 form.meta        // metadata, reactive when declared as a function
 form.register(k) // ready-made input props

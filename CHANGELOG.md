@@ -21,6 +21,15 @@ independently.
   `shape` and it did not typecheck. A key is optional only when a `canShow` rule
   can hide it: an all-optional shape is what those functions reject.
 
+### `@null-nuxt/form-domain` — Added
+
+- **`composeSchema(combine)`**, handing the visible validators to the project's
+  own combinator and returning a `ComputedRef`:
+  `form.composeSchema(object)`, `form.composeSchema(z.object)`. Which library
+  composes stays the project's decision; the reactivity does not — composing by
+  hand outside a `computed` freezes the schema at its first value, so a field
+  `canShow` hides later stays required.
+
 ### `@null-nuxt/form-domain` — Changed
 
 - **`register()` is typed per field.** `options`, `placeholder` and `mask` are

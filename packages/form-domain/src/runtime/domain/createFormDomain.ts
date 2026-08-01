@@ -169,6 +169,15 @@ function createInstance(definition: Definition) {
       return visible
     })
 
+    /**
+     * Composition stays the project's call — the engine has no idea whether
+     * `object`, `z.object` or something else is the right combinator — but the
+     * reactivity doesn't: wrapping it here is what keeps a hidden field from
+     * staying required in a schema that was composed once and never again.
+     */
+    const composeSchema = (combine: (shape: never) => unknown) =>
+      computed(() => combine(shape.value as never))
+
     const validate = async (): Promise<ValidationResult<FormValues<FieldsDef>>> => {
       const errors: Record<string, string[]> = {}
       const firstErrors: Record<string, string> = {}
@@ -256,6 +265,7 @@ function createInstance(definition: Definition) {
       options,
       selected,
       shape,
+      composeSchema,
       validate,
       meta,
       set,
