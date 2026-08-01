@@ -297,17 +297,16 @@ describe('option escolhida', () => {
   })
 })
 
-describe('label guardado em campo próprio', () => {
+describe('payload: o label da escolha no que sai pro backend', () => {
   /**
    * `data.regiao.label` é o rótulo do CAMPO ("Região") e não pode virar o texto
-   * da option ("1ª Região") — são coisas diferentes com o mesmo nome. Daí o
-   * label da escolha ir para um campo comum, que viaja no payload.
+   * da option ("1ª Região") — são coisas diferentes com o mesmo nome. O texto
+   * da escolha entra no payload pela projeção, sem campo fantasma no meio.
    */
-  const buildComStore = (id: string, inicial = '') =>
+  const buildComPayload = (id: string, inicial = '') =>
     createFormDomain(id)
       .withFields({
         regiao: field({ label: 'Região', value: inicial }),
-        regiao_descricao: field({ label: 'Região (descrição)', value: '' }),
       })
       .withRules({
         regiao: {
@@ -315,46 +314,97 @@ describe('label guardado em campo próprio', () => {
             { label: '1ª Região', value: 'primeira' },
             { label: '2ª Região', value: 'segunda' },
           ],
-          storeLabelIn: 'regiao_descricao',
         },
       })
+      .withPayload(ctx => ({
+        ...ctx.values,
+        regiao_descricao: ctx.selected.regiao?.label ?? '',
+      }))
       .build()
 
   it('o rótulo do campo não é tocado', async () => {
-    const form = buildComStore('store-rotulo')()
+    const form = buildComPayload('payload-rotulo')()
     form.set({ regiao: 'primeira' })
     await nextTick()
 
     expect(form.data.regiao.label).toBe('Região')
-    expect(form.values.value.regiao_descricao).toBe('1ª Região')
+    expect(form.payload.value.regiao_descricao).toBe('1ª Região')
   })
 
-  it('o label entra em values, então viaja no payload', async () => {
-    const form = buildComStore('store-payload')()
+  it('o texto da escolha viaja junto do valor', async () => {
+    const form = buildComPayload('payload-texto')()
     form.set({ regiao: 'segunda' })
     await nextTick()
 
-    expect(form.values.value).toMatchObject({
+    expect(form.payload.value).toMatchObject({
       regiao: 'segunda',
       regiao_descricao: '2ª Região',
     })
   })
 
-  it('preenche já na criação quando o valor vem restaurado', () => {
-    const form = buildComStore('store-restaurado', 'primeira')()
-    expect(form.values.value.regiao_descricao).toBe('1ª Região')
+  /**
+   * Sem watcher e sem `immediate`: sendo calculado na leitura, um valor
+   * restaurado já sai resolvido na primeira leitura.
+   */
+  it('resolve o valor restaurado sem precisar de uma primeira mudança', () => {
+    const form = buildComPayload('payload-restaurado', 'primeira')()
+    expect(form.payload.value.regiao_descricao).toBe('1ª Região')
   })
 
-  it('limpa a descrição quando a escolha deixa de existir', async () => {
-    const form = buildComStore('store-limpa')()
+  it('esvazia quando a escolha deixa de existir na lista', async () => {
+    const form = buildComPayload('payload-limpa')()
     form.set({ regiao: 'primeira' })
     await nextTick()
-    expect(form.values.value.regiao_descricao).toBe('1ª Região')
+    expect(form.payload.value.regiao_descricao).toBe('1ª Região')
 
     form.set({ regiao: '' })
     await nextTick()
 
-    expect(form.values.value.regiao_descricao).toBe('')
+    expect(form.payload.value.regiao_descricao).toBe('')
+  })
+
+  /** Sem projeção declarada o payload é `values`, como sempre foi. */
+  it('sem withPayload o payload é values', () => {
+    const form = createFormDomain('payload-ausente')
+      .withFields({ nome: field({ label: 'Nome', value: 'Ana' }) })
+      .use()
+
+    expect(form.payload.value).toEqual({ nome: 'Ana' })
+  })
+
+  /**
+   * `visible` existe pro caso oposto ao de `values`: o documento do grupo
+   * escondido não tem por que viajar, e essa decisão é do projeto, não do
+   * engine — por isso os dois chegam no contexto.
+   */
+  it('visible deixa de fora o que o canShow escondeu, values não', async () => {
+    const form = createFormDomain('payload-visible')
+      .withFields({
+        tipo: field<Pessoa>({ label: 'Tipo', value: '' }),
+        cpf: field({ label: 'CPF', value: '' }),
+      })
+      .withFacts(ctx => ({ isPF: ctx.values.tipo === 'PF' }))
+      .withRules({ cpf: { canShow: ctx => ctx.facts.isPF } })
+      .withPayload(ctx => ({ visible: ctx.visible, todos: ctx.values }))
+      .use()
+
+    form.set({ tipo: 'PJ', cpf: '111' })
+    await nextTick()
+
+    expect(form.payload.value.visible).not.toHaveProperty('cpf')
+    expect(form.payload.value.todos).toHaveProperty('cpf', '111')
+  })
+
+  /** O outcome chega no payload, pra um preço não ser recalculado aqui. */
+  it('o payload lê o outcome em vez de repetir a conta', () => {
+    const form = createFormDomain('payload-outcome')
+      .withFields({ tipo: field<Pessoa>({ label: 'Tipo', value: 'PF' }) })
+      .withFacts(ctx => ({ isPF: ctx.values.tipo === 'PF' }))
+      .withOutcome(ctx => ({ price: ctx.facts.isPF ? 59.9 : 89.9 }))
+      .withPayload(ctx => ({ ...ctx.values, price: ctx.outcome.price }))
+      .use()
+
+    expect(form.payload.value.price).toBe(59.9)
   })
 })
 

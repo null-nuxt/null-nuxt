@@ -23,6 +23,19 @@ independently.
 
 ### `@null-nuxt/form-domain` — Added
 
+- **`withMetadata`**, the catalog entry: title, route, category, keywords,
+  ordering, which component renders the form. Static, and attached to the
+  factory rather than the instance, so **`useFormDomainsMetadata()` lists every
+  domain without instantiating any of them**. The old listing called every
+  factory to collect what were mostly constants — a catalog of 300 certificates
+  created 300 effect scopes to render 300 links.
+- **`withPayload`**, projecting the filled form for the backend. The context
+  carries `values`, `visible` (only what `canShow` allows through), `facts`,
+  `selected` and `outcome`, so a price the backend also wants isn't computed
+  twice. Without it, `payload` is `values`.
+- **`PayloadContextOf`** for splitting the payload into its own file. It
+  annotates the context rather than the whole function, so unlike `SchemaOf`
+  the projected type survives.
 - **`composeSchema(combine)`**, handing the visible validators to the project's
   own combinator and returning a `ComputedRef`:
   `form.composeSchema(object)`, `form.composeSchema(z.object)`. Which library
@@ -38,9 +51,26 @@ independently.
   `undefined`. `field()` now returns the definition as written to make that
   possible; the guarantee that an option's value matches the field's is
   unchanged.
-- `FormDomainBuilder` and `FormDomainInstance` carry two further type
-  parameters, for the schema and the rules. Both default, so annotations that
-  named the previous four keep working.
+- `FormDomainBuilder` and `FormDomainInstance` carry further type parameters —
+  schema, rules, metadata and payload. All default, so annotations that named
+  the previous four keep working.
+- **`withComputed` is now `withFacts`**, and `ctx.computed` is `ctx.facts`.
+  Vue's `computed` is auto-imported in every SFC, so the old name made the
+  reader stop to work out which of the two it was. `facts` also pairs with
+  `rules`.
+- **`withMeta` is now `withOutcome`**, and `form.meta` is `form.outcome`;
+  `MetaOf` is `OutcomeOf`. The name had to move to make room for `metadata`,
+  and `outcome` describes the contents better: price, sku and the cart line are
+  what results from filling the form in, not metadata about the domain.
+
+### `@null-nuxt/form-domain` — Removed
+
+- **`storeLabelIn`.** Getting an option's text into the payload took three
+  declarations — a phantom `field()` nobody fills, the mirror rule, and a
+  second rule hiding the phantom from the screen — and kept derived data as
+  state, which is the staleness the engine argues against everywhere else.
+  `withPayload` does it in one line, computed on read. The phantom field, its
+  watcher and the `Exclude<keyof F, K>` gymnastics are gone with it.
 
 ## [0.1.0] — 2026-07-31
 

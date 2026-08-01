@@ -29,14 +29,5 @@ export const rules: RulesOf<Base> = {
     // sem tipo escolhido não há região que faça sentido
     canShow: ctx => ctx.facts.isPF || ctx.facts.isPJ,
     options: regioesDe,
-
-    /**
-     * O campo guarda `'primeira'`; o backend também precisa de `'1ª Região'`.
-     * `data.regiao.label` não serve pra isso — ele é o rótulo do campo.
-     */
-    storeLabelIn: 'regiao_descricao',
   },
-
-  // preenchido pelo engine a partir da escolha; não é digitado
-  regiao_descricao: { canShow: () => false },
 }

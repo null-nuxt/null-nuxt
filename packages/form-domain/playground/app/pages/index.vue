@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { data, canShow, options, values, outcome, facts, shape, reset } = useFormDomain('justica-federal')
+const { data, canShow, options, values, outcome, payload, facts, shape, reset } = useFormDomain('justica-federal')
 
 const camposNoSchema = computed(() => Object.keys(shape.value))
 </script>
@@ -66,6 +66,14 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
         <small style="opacity:.6">
           o campo guarda <code>{{ values.regiao || '—' }}</code>; o label vem
           derivado, então acompanha se a lista mudar
+        </small>
+      </div>
+      <div>
+        <strong>payload</strong>: <code>{{ payload }}</code>
+        <br>
+        <small style="opacity:.6">
+          projeção do formulário: o texto da região entra aqui sem existir um
+          campo pra ele, e o documento escondido fica de fora
         </small>
       </div>
       <div>

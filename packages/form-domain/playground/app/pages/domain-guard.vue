@@ -34,38 +34,38 @@ const useDomain = createFormDomain('domain-guard')
   .withOutcome(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
   .build()
 
-/** `storeLabelIn` só aceita outro campo do próprio domínio. */
-createFormDomain('domain-guard-label')
+/**
+ * O payload é uma PROJEÇÃO: o texto da escolha entra nele sem campo fantasma,
+ * e o contexto oferece `values` e `visible` para o projeto escolher qual dos
+ * dois vai pro backend.
+ */
+const projetado = createFormDomain('domain-guard-payload')
   .withFields({
-    regiao: field({ label: 'Região', value: '' }),
-    regiao_descricao: field({ label: 'Descrição', value: '' }),
+    tipo: field<'PF' | 'PJ' | ''>({ label: 'Tipo', value: '' }),
+    regiao: field({ label: 'Região', value: '', options: [{ label: '1ª Região', value: 'primeira' }] }),
   })
-  .withRules({
-    regiao: { storeLabelIn: 'regiao_descricao' },
-  })
-  .build()
+  .withFacts(ctx => ({ isPF: ctx.values.tipo === 'PF' }))
+  .withOutcome(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
+  .withPayload(ctx => ({
+    ...ctx.visible,
+    regiao_descricao: ctx.selected.regiao?.label ?? '',
+    price: ctx.outcome.price,
+  }))
+  .use()
 
-createFormDomain('domain-guard-label-invalido')
-  .withFields({
-    regiao: field({ label: 'Região', value: '' }),
-    regiao_descricao: field({ label: 'Descrição', value: '' }),
-  })
-  .withRules({
-    // @ts-expect-error destino que não existe em fields
-    regiao: { storeLabelIn: 'nao_existe' },
-  })
-  .build()
+// a projeção é tipada a partir da função, não colapsada em Record<string, unknown>
+const descricao: string = projetado.payload.value.regiao_descricao
+const preco: number = projetado.payload.value.price
 
-createFormDomain('domain-guard-label-proprio')
-  .withFields({
-    regiao: field({ label: 'Região', value: '' }),
-    regiao_descricao: field({ label: 'Descrição', value: '' }),
-  })
-  .withRules({
-    // @ts-expect-error guardar o label no próprio campo apagaria o valor
-    regiao: { storeLabelIn: 'regiao' },
-  })
-  .build()
+// @ts-expect-error o payload não declara essa chave
+const semChave = projetado.payload.value.naoExiste
+
+/** Sem `withPayload`, o payload continua sendo `values`. */
+const semProjecao = createFormDomain('domain-guard-payload-ausente')
+  .withFields({ nome: field({ label: 'Nome', value: '' }) })
+  .use()
+
+const nome: string = semProjecao.payload.value.nome
 
 const form = useDomain()
 
@@ -92,5 +92,5 @@ form.set({ sobrenome: 'x' })
 
 <template>
   <!-- referenciados só pra manter vivas as checagens do script -->
-  <div>{{ price }} {{ tipo }} {{ semMeta }} {{ semCampo }}</div>
+  <div>{{ price }} {{ tipo }} {{ semMeta }} {{ semCampo }} {{ descricao }} {{ preco }} {{ semChave }} {{ nome }}</div>
 </template>

@@ -71,18 +71,6 @@ export type DomainRules<F extends FieldsDef, C> = {
     options?: (ctx: DomainContext<F, C>) => ReadonlyArray<FieldOption<F[K]['value']>>
 
     /**
-     * Copies the selected option's label into ANOTHER field, so it can travel in
-     * the payload like any other value.
-     *
-     * It exists because `data.field.label` is the field's label ("Region") and
-     * cannot become the option's text ("First Region") — two different things
-     * sharing a name. The destination is an ordinary field declared in `fields`,
-     * so it lands in `values`, can be validated and is sent with no special
-     * handling.
-     */
-    storeLabelIn?: Exclude<keyof F & string, K>
-
-    /**
      * A genuine side effect (clearing a field, autofilling from a service).
      * Writes through `ctx.patch()`; the return value is ignored, so a helper
      * that happens to return an object won't change the form by accident.
@@ -151,6 +139,32 @@ export type DomainSchema<F extends FieldsDef, C> =
 export type DomainOutcome<F extends FieldsDef, C, M> =
   | M
   | ((ctx: OutcomeContext<F, C>) => M)
+
+/**
+ * The payload context: everything the projection could need, and the outcome
+ * along with it, so a price the backend also wants isn't recomputed here.
+ *
+ * The direction is one-way — `outcome` never sees `payload` — which is what
+ * keeps the layers from closing into a cycle.
+ */
+export interface PayloadContext<F extends FieldsDef, C, O> extends OutcomeContext<F, C> {
+  /**
+   * Only the fields a `canShow` is currently letting through.
+   *
+   * It sits next to `values` rather than replacing it because neither answer is
+   * right for everyone: a backend that wants the key always present spreads
+   * `values`, one that must not receive a hidden group spreads `visible`. The
+   * engine picking for you would be a silent decision either way.
+   */
+  visible: Partial<FormValues<F>>
+  outcome: O
+}
+
+/**
+ * What leaves for the backend. A function, always: a payload that didn't depend
+ * on the form would be a constant, and constants belong in `metadata`.
+ */
+export type DomainPayload<F extends FieldsDef, C, O, P> = (ctx: PayloadContext<F, C, O>) => P
 
 /**
  * The extras an input may receive. All optional: the engine only emits the ones
@@ -233,6 +247,7 @@ export interface FormDomainInstance<
   S = object,
   R = object,
   Meta = object,
+  P = FormValues<F>,
 > {
   /** The literal is preserved: it's what lets `useFormDomain('slug')` type its return. */
   id: Id
@@ -272,6 +287,11 @@ export interface FormDomainInstance<
   validate: () => Promise<ValidationResult<FormValues<F>>>
   /** What results from filling this in: price, sku, the cart line. */
   outcome: ComputedRef<O>
+  /**
+   * What leaves for the backend, projected by the domain itself. Without
+   * `withPayload` it is simply `values`.
+   */
+  payload: ComputedRef<P>
   set: (patch: Partial<FormValues<F>>) => void
   reset: () => void
   dispose: () => void
@@ -294,8 +314,9 @@ export interface FormDomainFactory<
   S = object,
   R = object,
   Meta = object,
+  P = FormValues<F>,
 > {
-  (): FormDomainInstance<F, C, O, Id, S, R, Meta>
+  (): FormDomainInstance<F, C, O, Id, S, R, Meta, P>
   id: Id
   metadata: Meta
 }
@@ -314,6 +335,7 @@ export interface FormDomainBuilder<
   S = object,
   R = object,
   Meta = object,
+  P = FormValues<F>,
 > {
   /**
    * The catalog entry: what this domain IS, before anyone fills anything in —
@@ -324,8 +346,8 @@ export interface FormDomainBuilder<
    * metadata without instantiating a single one. `outcome` cannot do that — a
    * price that depends on the person type needs a filled form.
    */
-  withMetadata: <Meta2 extends object>(metadata: Meta2) => FormDomainBuilder<F, C, O, Id, S, R, Meta2>
-  withFields: <F2 extends FieldsDef>(fields: F2) => FormDomainBuilder<F2, C, O, Id, S, R, Meta>
+  withMetadata: <Meta2 extends object>(metadata: Meta2) => FormDomainBuilder<F, C, O, Id, S, R, Meta2, P>
+  withFields: <F2 extends FieldsDef>(fields: F2) => FormDomainBuilder<F2, C, O, Id, S, R, Meta, P>
 
   /**
    * The shared conclusions the rest of the domain reads. Named `facts` rather
@@ -335,7 +357,7 @@ export interface FormDomainBuilder<
    */
   withFacts: <C2 extends object>(
     derive: (ctx: FieldsContext<F>) => C2,
-  ) => FormDomainBuilder<F, C2, O, Id, S, R, Meta>
+  ) => FormDomainBuilder<F, C2, O, Id, S, R, Meta, P>
 
   /**
    * `R2` is carried forward, not discarded: `register()` needs to know whether a
@@ -344,7 +366,7 @@ export interface FormDomainBuilder<
    */
   withRules: <R2>(
     rules: R2 & DomainRules<F, C> & OnlyKnownKeys<R2, keyof F & string>,
-  ) => FormDomainBuilder<F, C, O, Id, S, R2, Meta>
+  ) => FormDomainBuilder<F, C, O, Id, S, R2, Meta, P>
 
   /**
    * The same double defence as `rules`, for the same reason: with a union target
@@ -358,22 +380,39 @@ export interface FormDomainBuilder<
   withSchema: {
     <S2>(
       shape: S2 & DomainSchemaShape<NoInfer<F>> & OnlyKnownKeys<S2, keyof F & string>,
-    ): FormDomainBuilder<F, C, O, Id, S2, R, Meta>
+    ): FormDomainBuilder<F, C, O, Id, S2, R, Meta, P>
     <S2 extends DomainSchemaShape<F>>(
       build: (ctx: SchemaContext<F, C>) => S2,
-    ): FormDomainBuilder<F, C, O, Id, S2, R, Meta>
+    ): FormDomainBuilder<F, C, O, Id, S2, R, Meta, P>
   }
 
   withOutcome: <O2 extends object>(
     outcome: DomainOutcome<F, C, O2>,
-  ) => FormDomainBuilder<F, C, O2, Id, S, R, Meta>
+  ) => FormDomainBuilder<F, C, O2, Id, S, R, Meta, P>
+
+  /**
+   * How the filled form is projected for the backend.
+   *
+   * It exists because the payload is a PROJECTION of the form, not a set of
+   * fields — and while `values` was the only way into what gets sent, anything
+   * the payload needed had to be forged into a field nobody fills. That cost a
+   * phantom field, a rule to hide it, and a watcher mirroring derived data back
+   * into state: the staleness this engine argues against everywhere else.
+   *
+   * Computed on read, so a label resolved from an options list that depends on
+   * another field is right by construction, not right because a watcher kept
+   * up.
+   */
+  withPayload: <P2>(
+    project: DomainPayload<F, C, O, P2>,
+  ) => FormDomainBuilder<F, C, O, Id, S, R, Meta, P2>
 
   /**
    * Ends the type accumulation and returns the domain's composable, registered
    * by slug: every caller receives the SAME instance. This is the path for
    * domains under `<srcDir>/forms`.
    */
-  build: () => FormDomainFactory<F, C, O, Id, S, R, Meta>
+  build: () => FormDomainFactory<F, C, O, Id, S, R, Meta, P>
 
   /**
    * A LOCAL instance, created on the spot — for a simple form declared inside
@@ -382,7 +421,7 @@ export interface FormDomainBuilder<
    *
    * Watchers are bound to the caller's scope and die with it.
    */
-  use: () => FormDomainInstance<F, C, O, Id, S, R, Meta>
+  use: () => FormDomainInstance<F, C, O, Id, S, R, Meta, P>
 }
 
 /**
@@ -391,11 +430,11 @@ export interface FormDomainBuilder<
  * files: `rules.ts` imports the TYPE of the partial domain instead of trying to
  * reconstruct it, which would cause a circular import.
  */
-export type ContextOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta>
+export type ContextOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta, infer _P>
   ? DomainContext<F, C>
   : never
 
-export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta>
+export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta, infer _P>
   ? DomainRules<F, C>
   : never
 
@@ -404,10 +443,26 @@ export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O,
  * would stop `withSchema`'s overloads from picking the right signature. The
  * unknown-key check happens here, at the declaration.
  */
-export type SchemaOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta>
+export type SchemaOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta, infer _P>
   ? (ctx: SchemaContext<F, C>) => DomainSchemaShape<F>
   : never
 
-export type OutcomeOf<B, M extends object> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta>
+export type OutcomeOf<B, M extends object> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta, infer _P>
   ? DomainOutcome<F, C, M>
+  : never
+
+/**
+ * Annotates the payload function's PARAMETER, not the function — deliberately.
+ *
+ * The sibling helpers annotate the whole function, and that costs them the
+ * return type: the annotation is all the compiler sees, so `SchemaOf` can never
+ * hand back more than it promised. Typing only the context leaves the return to
+ * be inferred from the object literal, so a split-file payload stays as
+ * precisely typed as an inline one.
+ *
+ * The outcome type is a parameter because the split-file assembly declares the
+ * payload beside the outcome, before either is attached to the builder.
+ */
+export type PayloadContextOf<B, O = object> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta, infer _P>
+  ? PayloadContext<F, C, O>
   : never

@@ -126,8 +126,30 @@ createFormDomain('federal-court')
   })
   .withSchema(ctx => ctx.shape({ /* ... */ }))
   .withOutcome(ctx => ({ sku: ctx.facts.isIndividual ? 'A' : 'B' }))
+  .withPayload(ctx => ({ ...ctx.visible, price: ctx.outcome.price }))
   .build()
 ```
+
+### The layers
+
+Each layer answers one question, and **no layer reads a layer below it** — the
+one rule that keeps them from blurring:
+
+| layer | question | needs an instance? |
+|---|---|---|
+| `metadata` | what is this domain, before anyone fills anything in? | **no** |
+| `fields` | what does the user fill? | — |
+| `facts` | what does the domain conclude? | yes |
+| `rules` | how does each field behave? | yes |
+| `schema` | what makes each field valid? | yes |
+| `outcome` | what does filling this in result in? | yes |
+| `payload` | what leaves for the backend? | yes |
+
+`facts` is the only shared intermediate: it is written once and read by
+everything after it. `outcome` and `payload` are the two ends — `outcome` is
+the meaning (`price: 59.9`), `payload` is the wire format
+(`valor_centavos: 5990`) — and the payload may quote the outcome so a price
+isn't computed twice.
 
 ### Why a builder and not a plain object
 
@@ -247,6 +269,33 @@ instead of a function — the function form is rebuilt on every form change:
 .withSchema({ name: string().required() })
 ```
 
+### `metadata`: the catalog entry
+
+Title, route, category, keywords, ordering, which component renders the form —
+none of it depends on anyone filling anything in:
+
+```ts
+createFormDomain('prenuptial-deed')
+  .withMetadata({
+    title: 'Prenuptial Agreement Deed Certificate',
+    to: '/services/certificates/deeds/prenuptial',
+    category: 'deeds',
+    keywords: ['prenuptial', 'deed', 'marriage'],
+    order: 355,
+  })
+```
+
+Being static is the point, not the style: `metadata` hangs off the **factory**,
+so a listing reads every domain without building a single form.
+
+```ts
+useFormDomainsMetadata()  // no instance created
+useFormDomainsOutcome()   // instantiates every domain — an outcome needs a filled form
+```
+
+That distinction is why this isn't just "static meta". A catalog of 300
+certificates used to create 300 effect scopes to render 300 links.
+
 ### Where each thing lives
 
 The split isn't "UI vs business", it's **static vs derived**:
@@ -296,37 +345,57 @@ Derived, the text follows along on its own. `meta` also receives
 depended on the selected option would recurse. Separate contexts make that
 impossible by construction.
 
-### Storing the label for the payload
+### `payload`: what leaves for the backend
 
 `selected` solves the live read, but doesn't put anything in what gets sent. If
-your backend needs the text — a persisted cart, an invoice, history — point at
-a destination field:
+your backend needs the text — a persisted cart, an invoice, history — project
+it:
 
 ```ts
-fields: {
-  region: field({ label: 'Region', value: '' }),
-  region_description: field({ label: 'Region (description)', value: '' }),
-},
-rules: {
-  region: { options: regionsFor, storeLabelIn: 'region_description' },
-},
+.withPayload(ctx => ({
+  ...ctx.visible,
+  region_description: ctx.selected.region?.label ?? '',
+  price: ctx.outcome.price,
+}))
 ```
 
 `data.region.label` is **not** for this: it's the field's label ("Region"), not
 the choice's text ("First Region") — two meanings sharing a name.
 
-The destination is an ordinary field, so it lands in `values`, can be validated
-and is sent with no special handling. It follows the selection (including on a
-restored form, filled in at creation time) and empties when the choice no
-longer exists in the list.
+The payload is a **projection** of the form, not a set of fields. That matters
+because the alternative — the shape this module used to have — was to force
+anything the payload needed into a field nobody fills: a phantom `field()`, a
+rule mirroring the label into it, and a second rule hiding it from the screen.
+Three declarations for one idea, and derived data kept as state, which is the
+staleness this engine argues against everywhere else.
 
-The compiler rejects a destination that isn't in `fields`, and rejects pointing
-a field at itself — which would erase its own value.
+Computed on read, so a label resolved from an options list that depends on
+another field is right by construction rather than right because a watcher kept
+up.
 
-### Reactive meta
+**`values` or `visible`, your call.** `values` is every field; `visible` is only
+what a `canShow` is currently letting through. A backend that wants the key
+always present spreads `values`; one that must not receive the opposite group's
+document spreads `visible`. Both reach the context because neither answer is
+right for everyone — and the engine picking one would be a silent decision.
 
-`meta` is a function of the context, so variable data (a price that depends on
-the person type) stays reactive — with no separate place for "dynamic meta".
+Splitting it into its own file keeps the precise type, unlike `SchemaOf`,
+because the helper annotates the **parameter** and lets the return be inferred:
+
+```ts
+// forms/federal-court/payload.ts
+export const payload = (ctx: PayloadContextOf<Base, CourtOutcome>) => ({
+  ...ctx.visible,
+  region_description: ctx.selected.region?.label ?? '',
+})
+```
+
+### Reactive outcome
+
+`outcome` is a function of the context, so variable data (a price that depends
+on the person type) stays reactive — with no separate place for "dynamic
+outcome". What is genuinely constant belongs in `metadata`, which is a
+different question, not a different flavour of the same one.
 
 ## Clearing a field that disappeared
 
@@ -382,7 +451,7 @@ with nobody asking — and nothing in the code would say so.
 <script setup lang="ts">
 import useFederalCourt from '~/forms/federal-court'
 
-const { data, canShow, options, values, meta, validate } = useFederalCourt()
+const { data, canShow, options, values, outcome, payload, validate } = useFederalCourt()
 </script>
 
 <template>
@@ -430,14 +499,19 @@ circular import.
 Domains under `<srcDir>/forms` are discovered automatically:
 
 ```ts
-const domain = useFormDomain('federal-court') // typed: that domain's meta and fields
-const all = useFormDomains()                   // instantiates all — use for catalogs
-const catalog = useFormDomainsOutcome()           // metadata only
+const domain = useFormDomain('federal-court') // typed: that domain's fields, facts and outcome
+const catalog = useFormDomainsMetadata()      // catalog entries, NO instance created
+const all = useFormDomains()                  // instantiates all of them
+const outcomes = useFormDomainsOutcome()      // ditto, plus each outcome
 ```
 
 `useFormDomain` instantiates **only** the requested domain: the factory is
-registered at `build()` time without creating reactive state. `useFormDomains`
-instantiates all of them — the inherent cost of listing.
+registered at `build()` time without creating reactive state.
+
+`useFormDomainsMetadata` instantiates **nothing** — `metadata` is static, so it
+is read straight off the factory. That's the one to reach for in a listing. The
+other two build every domain, which is the inherent cost of needing reactive
+values from all of them at once.
 
 `x.ts` and `x/index.ts` are the same domain; if both exist, the directory wins.
 
@@ -449,9 +523,8 @@ instantiates all of them — the inherent cost of listing.
 | `schema` validating a field that doesn't exist | **compile time** |
 | `ctx.facts` with an undeclared key | **compile time** |
 | `set()` with a wrong field or type | **compile time** |
-| `meta` with a key that doesn't exist | **compile time** |
+| `outcome` or `payload` with a key that doesn't exist | **compile time** |
 | `useFormDomain('unknown-slug')` | **compile time** |
-| `storeLabelIn` pointing at a missing field, or at itself | **compile time** |
 | `register()` reading an extra the field never declared | **compile time** |
 | an option whose value doesn't match the field's | **compile time** |
 | `onChange` patching a field that doesn't exist | ignored at runtime |
@@ -468,14 +541,16 @@ const form = useMyDomain()
 form.id          // slug, as a literal type
 form.data        // reactive: { field: { key, label, value, mask? } }
 form.values      // plain values
-form.facts    // derived business rules
+form.metadata    // the catalog entry — static, also on the factory
+form.facts       // the domain's conclusions, shared downstream
 form.canShow     // { field: boolean } — a field with no rule is visible
 form.options     // effective options per field
 form.selected    // the selected option — where the friendly label comes from
 form.shape       // visible validators, with the types you declared
 form.composeSchema(object) // the same, composed by your library, reactive
 form.validate()  // validates visible fields only
-form.outcome        // metadata, reactive when declared as a function
+form.outcome     // price, sku, the cart line — reactive
+form.payload     // the projection for the backend; `values` if none declared
 form.register(k) // ready-made input props
 form.set(patch)  // partial, typed patch
 form.reset()     // back to initial values

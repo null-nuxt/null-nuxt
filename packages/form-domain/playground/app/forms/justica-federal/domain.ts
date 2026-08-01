@@ -25,8 +25,6 @@ export const base = createFormDomain('justica-federal')
     cpf: field({ label: 'CPF', value: '' }),
     cnpj: field({ label: 'CNPJ', value: '' }),
     regiao: field({ label: 'Região', value: '' }),
-    // guarda o texto da região escolhida pra ele viajar no payload
-    regiao_descricao: field({ label: 'Região (descrição)', value: '' }),
   })
   .withFacts(ctx => ({
     isPF: ctx.values.tipo_pessoa === 'PF',

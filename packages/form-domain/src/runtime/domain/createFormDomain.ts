@@ -8,6 +8,7 @@ import type {
   ChangeContext,
   DomainContext,
   DomainOutcome,
+  DomainPayload,
   DomainRules,
   DomainSchema,
   FieldOption,
@@ -23,6 +24,7 @@ interface Definition {
   rules?: DomainRules<FieldsDef, unknown>
   schema?: DomainSchema<FieldsDef, unknown>
   outcome?: DomainOutcome<FieldsDef, unknown, Record<string, unknown>>
+  project?: DomainPayload<FieldsDef, unknown, unknown, unknown>
 }
 
 /**
@@ -131,19 +133,6 @@ function createInstance(definition: Definition) {
       return result
     })
 
-    /**
-     * Mirrors the option's text into an ordinary field so it can travel in the
-     * payload. `immediate` because a restored form already arrives with a value
-     * selected and needs its label filled without waiting for the next change.
-     */
-    watch(selected, (current) => {
-      for (const key of Object.keys(definition.fields)) {
-        const target = definition.rules?.[key]?.storeLabelIn
-        if (!target || !(target in data)) continue
-        data[target]!.value = current[key]?.label ?? ''
-      }
-    }, { immediate: true })
-
     // `shape` is the identity function at runtime: it exists purely so
     // TypeScript can check the keys, which it won't do on an arrow's return
     const schemaContext = Object.create(context) as Record<string, unknown>
@@ -213,6 +202,32 @@ function createInstance(definition: Definition) {
         : definition.outcome ?? {},
     )
 
+    /** Only what a `canShow` is currently letting through. */
+    const visibleValues = computed(() => {
+      const result: Record<string, unknown> = {}
+      for (const key of Object.keys(data)) {
+        if (canShow.value[key] !== false) result[key] = data[key]!.value
+      }
+      return result
+    })
+
+    /**
+     * Inherits the outcome context and adds the two things only a projection
+     * needs. `outcome` is a getter so reading it stays lazy: a payload that
+     * never mentions the price shouldn't make the price a dependency.
+     */
+    const payloadContext = Object.create(outcomeContext) as Record<string, unknown>
+    Object.defineProperty(payloadContext, 'visible', { get: () => visibleValues.value })
+    Object.defineProperty(payloadContext, 'outcome', { get: () => outcome.value })
+
+    /**
+     * Without a projection the payload IS `values` — the same object the engine
+     * always sent, just no longer the only shape available.
+     */
+    const payload = computed(() =>
+      definition.project ? definition.project(payloadContext as never) : values.value,
+    )
+
     for (const key of Object.keys(definition.rules ?? {})) {
       const onChange = definition.rules?.[key]?.onChange
       if (!onChange) continue
@@ -270,6 +285,7 @@ function createInstance(definition: Definition) {
       composeSchema,
       validate,
       outcome,
+      payload,
       set,
       reset,
       dispose: () => scope.stop(),
@@ -345,6 +361,10 @@ export function createFormDomain<const Id extends string>(
     },
     withOutcome(outcome: DomainOutcome<FieldsDef, unknown, Record<string, unknown>>) {
       definition.outcome = outcome
+      return builder
+    },
+    withPayload(project: DomainPayload<FieldsDef, unknown, unknown, unknown>) {
+      definition.project = project
       return builder
     },
     build() {
