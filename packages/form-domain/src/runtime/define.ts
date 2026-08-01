@@ -2,7 +2,7 @@ import { computed, effectScope, getCurrentScope, onScopeDispose } from 'vue'
 import { getFormRegistry } from './registry'
 import { createEngine } from './engine'
 import type { ComputedRef } from 'vue'
-import type { AnyFields, Exposed, FormEngine, SetupResult, ValuesOf } from './form-types'
+import type { AnyFields, Exposed, FormEngine, SetupResult, ValuesOf } from './types'
 
 /**
  * A form assembled inside a component. The component's own `setup` is already
@@ -56,11 +56,6 @@ export interface FormDomain<Meta, S extends SetupResult, P, Id extends string = 
    */
   payload: <P2>(project: (ctx: PayloadContext<S>) => P2) => FormDomain<Meta, S, P2, Id>
 }
-
-/** Factories by slug, registered without instantiating anything. */
-const factories = new Map<string, unknown>()
-
-export const registeredSetupDomains = () => factories
 
 function create<Meta, S extends SetupResult, Id extends string>(
   id: Id,
@@ -120,7 +115,6 @@ function create<Meta, S extends SetupResult, Id extends string>(
       create(id, metadata, setup, next) as unknown as FormDomain<Meta, S, P2, Id>,
   }) as FormDomain<Meta, S, unknown, Id>
 
-  factories.set(id, domain)
   return domain
 }
 

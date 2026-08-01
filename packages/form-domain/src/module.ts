@@ -57,7 +57,7 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
   setup(options, nuxt) {
     const resolver = createResolver(import.meta.url)
 
-    nuxt.options.alias['#forms'] = resolver.resolve('./runtime/types')
+    nuxt.options.alias['#forms'] = resolver.resolve('./runtime/index')
 
     const files = findDomainFiles(resolve(nuxt.options.srcDir, options.domainsDir))
     const withoutExtension = (file: string) => file.replace(/\.[cm]?[jt]s$/, '')
