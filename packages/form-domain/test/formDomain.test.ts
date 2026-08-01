@@ -1,9 +1,9 @@
 import { nextTick } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { string } from 'yup'
-import { addRule, addRules, addSchemas } from '../src/runtime/setup/register'
-import { defineFormDomain, useForm } from '../src/runtime/setup/define'
-import { field, fields } from '../src/runtime/setup/field'
+import { addRule, addRules, addSchemas } from '../src/runtime/register'
+import { defineFormDomain, useForm } from '../src/runtime/define'
+import { field, fields } from '../src/runtime/field'
 import { getFormRegistry } from '../src/runtime/registry'
 
 type Pessoa = 'PF' | 'PJ' | ''
@@ -282,5 +282,275 @@ describe('setup: guarda de estado compartilhado entre requests', () => {
 
     expect(avisos).toHaveBeenCalledOnce()
     avisos.mockRestore()
+  })
+})
+
+describe('campo escondido: validação', () => {
+  it('PJ continua sendo cobrada pelo CNPJ', async () => {
+    const form = useForm(montar())
+    form.set({ tipoPessoa: 'PJ' })
+    await nextTick()
+
+    expect((await form.validate()).firstErrors.cnpj).toBe('CNPJ obrigatório')
+  })
+
+  it('o documento do grupo oposto não é cobrado nem quando está sujo', async () => {
+    const f = montar()
+    const form = useForm(f)
+
+    // preenche o CPF enquanto ele ainda aparece, depois troca de grupo
+    form.set({ tipoPessoa: 'PF', cpf: '11111111111' })
+    await nextTick()
+    form.set({ tipoPessoa: 'PJ', cnpj: '22222222222222' })
+    await nextTick()
+
+    expect((await form.validate()).valid).toBe(true)
+  })
+
+  it('devolve o campo à validação quando ele volta a aparecer', async () => {
+    const form = useForm(montar())
+    expect(Object.keys(form.shape.value)).not.toContain('cpf')
+
+    form.set({ tipoPessoa: 'PF' })
+    await nextTick()
+
+    expect(Object.keys(form.shape.value)).toContain('cpf')
+  })
+})
+
+describe('composeSchema', () => {
+  /**
+   * A razão de existir: quem compõe na mão fora de um `computed` congela o
+   * schema no primeiro valor, e o campo que a regra escondeu depois continua
+   * exigido.
+   */
+  it('recompõe quando a visibilidade muda', async () => {
+    const form = useForm(montar())
+    const composto = form.composeSchema(shape => Object.keys(shape))
+
+    expect(composto.value).not.toContain('cpf')
+
+    form.set({ tipoPessoa: 'PF' })
+    await nextTick()
+
+    expect(composto.value).toContain('cpf')
+  })
+
+  it('entrega os validadores declarados, não uma cópia vazia', () => {
+    const form = useForm(montar())
+    expect(form.composeSchema(shape => shape).value).toBe(form.shape.value)
+  })
+})
+
+describe('limpeza do campo escondido', () => {
+  const comObs = () => {
+    const f = fields({
+      tipo: { label: 'Tipo', value: '' as Pessoa },
+      cpf: { label: 'CPF', value: '' },
+      cnpj: { label: 'CNPJ', value: '' },
+      obs: { label: 'Observação', value: '' },
+    })
+
+    addRules(f, {
+      cpf: { canShow: () => f.tipo.value === 'PF', clearWhenHidden: true },
+      cnpj: { canShow: () => f.tipo.value === 'PJ', clearWhenHidden: true },
+      obs: { canShow: () => f.tipo.value === 'PF' },
+    })
+
+    return f
+  }
+
+  /**
+   * O caso que o `onChange` escrito à mão errava: voltar pra vazio esconde os
+   * DOIS grupos, e a versão manual só limpava um.
+   */
+  it('voltar ao valor vazio limpa os dois grupos', async () => {
+    const form = useForm(comObs())
+
+    form.set({ tipo: 'PF', cpf: '111' })
+    await nextTick()
+    form.set({ tipo: 'PJ' })
+    await nextTick()
+    form.set({ cnpj: '222' })
+    form.set({ tipo: '' })
+    await nextTick()
+
+    expect(form.values.value.cpf).toBe('')
+    expect(form.values.value.cnpj).toBe('')
+  })
+
+  /** Opt-in porque apaga dado: num multi-etapa o escondido costuma guardar. */
+  it('campo sem a marca mantém o valor mesmo escondido', async () => {
+    const form = useForm(comObs())
+
+    form.set({ tipo: 'PF', obs: 'anotação' })
+    await nextTick()
+    form.set({ tipo: 'PJ' })
+    await nextTick()
+
+    expect(form.values.value.obs).toBe('anotação')
+  })
+
+  it('não limpa enquanto o campo continua visível', async () => {
+    const form = useForm(comObs())
+
+    form.set({ tipo: 'PF', cpf: '111' })
+    await nextTick()
+    form.set({ cpf: '222' })
+    await nextTick()
+
+    expect(form.values.value.cpf).toBe('222')
+  })
+})
+
+describe('coerência entre options e schema', () => {
+  /**
+   * Uma fonte só para as duas coisas. Sem isso, a lista da UI e a do backend
+   * divergem em silêncio — o select oferece o que o schema recusa.
+   */
+  const REGIOES_PF = [{ label: '1ª', value: 'primeira' }]
+  const REGIOES_PJ = [{ label: 'Nacional', value: 'nacional' }]
+
+  const comRegiao = () => {
+    const f = fields({
+      tipo: { label: 'Tipo', value: '' as Pessoa },
+      regiao: { label: 'Região', value: '' },
+    })
+
+    const lista = () => {
+      if (f.tipo.value === 'PF') return REGIOES_PF
+      if (f.tipo.value === 'PJ') return REGIOES_PJ
+      return []
+    }
+
+    addRules(f, { regiao: { options: lista } })
+    addSchemas(f, {
+      regiao: () => string().oneOf(lista().map(o => o.value), 'Região inválida').required(),
+    })
+
+    return f
+  }
+
+  it('sem tipo escolhido as options ficam vazias, não as do outro tipo', () => {
+    const form = useForm(comRegiao())
+    expect(form.options.value.regiao).toEqual([])
+  })
+
+  it('o schema recusa valor que não está nas options do contexto', async () => {
+    const form = useForm(comRegiao())
+
+    form.set({ tipo: 'PF', regiao: 'nacional' })
+    await nextTick()
+    expect((await form.validate()).errors.regiao).toBeDefined()
+
+    form.set({ regiao: 'primeira' })
+    await nextTick()
+    expect((await form.validate()).errors.regiao).toBeUndefined()
+  })
+})
+
+describe('onChange: escrita explícita', () => {
+  const comAutofill = (responder: (valor: string) => Promise<string>) => {
+    const f = fields({
+      cep: { label: 'CEP', value: '' },
+      cidade: { label: 'Cidade', value: '' },
+    })
+
+    addRule(f.cep, {
+      onChange: async (valor, ctx) => {
+        const cidade = await responder(valor)
+        ctx.patch({ cidade })
+      },
+    })
+
+    return f
+  }
+
+  it('aplica atualização de autopreenchimento', async () => {
+    const form = useForm(comAutofill(async () => 'Recife'))
+
+    form.set({ cep: '50000000' })
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(form.values.value.cidade).toBe('Recife')
+  })
+
+  /**
+   * O ponto do `patch` ser pedido e não escrita: uma consulta lenta não pode
+   * sobrescrever o que o usuário digitou depois.
+   */
+  it('descarta resposta obsoleta', async () => {
+    const atrasos: Record<string, number> = { primeiro: 20, segundo: 1 }
+
+    const form = useForm(comAutofill(async (valor) => {
+      await new Promise(resolve => setTimeout(resolve, atrasos[valor] ?? 0))
+      return `cidade-${valor}`
+    }))
+
+    form.set({ cep: 'primeiro' })
+    await nextTick()
+    form.set({ cep: 'segundo' })
+    await nextTick()
+
+    await new Promise(resolve => setTimeout(resolve, 40))
+
+    // o primeiro respondeu por último, e mesmo assim não venceu
+    expect(form.values.value.cidade).toBe('cidade-segundo')
+  })
+
+  it('ignora chave desconhecida devolvida pela regra', async () => {
+    const f = fields({ gatilho: { label: 'Gatilho', value: '' } })
+    addRule(f.gatilho, {
+      onChange: (_valor, ctx) => ctx.patch({ naoExiste: 'x' } as never),
+    })
+
+    const form = useForm(f)
+    f.gatilho.value = 'x'
+    await nextTick()
+
+    expect(form.values.value).toEqual({ gatilho: 'x' })
+  })
+})
+
+describe('instância e efeitos', () => {
+  it('reset volta aos valores iniciais', async () => {
+    const form = useForm(montar())
+
+    form.set({ tipoPessoa: 'PF', cpf: '111' })
+    await nextTick()
+    form.reset()
+
+    expect(form.values.value.cpf).toBe('')
+    expect(form.values.value.tipoPessoa).toBe('')
+  })
+
+  it('cada montagem tem estado próprio', () => {
+    const primeiro = useForm(montar())
+    const segundo = useForm(montar())
+
+    primeiro.set({ cpf: '111' })
+
+    expect(segundo.values.value.cpf).toBe('')
+  })
+
+  /** Sub-componente consome a mesma instância sem registrar os efeitos de novo. */
+  it('onChange roda uma vez só com vários consumidores', async () => {
+    const spy = vi.fn()
+
+    const domain = defineFormDomain('efeitos-uma-vez', () => {
+      const f = fields({ gatilho: { label: 'Gatilho', value: '' } })
+      addRule(f.gatilho, { onChange: valor => spy(valor) })
+      return { fields: f }
+    })
+
+    const pai = domain()
+    domain()
+    domain()
+
+    pai.set({ gatilho: 'x' })
+    await nextTick()
+
+    expect(spy).toHaveBeenCalledOnce()
   })
 })

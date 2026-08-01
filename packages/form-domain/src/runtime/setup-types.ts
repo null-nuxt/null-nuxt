@@ -1,5 +1,5 @@
 import type { ComputedRef } from 'vue'
-import type { ValidationResult } from '../standard'
+import type { ValidationResult } from './standard'
 import type { BuiltFields, FieldObj, FieldsInput } from './field'
 
 export interface FieldOption<TValue> {

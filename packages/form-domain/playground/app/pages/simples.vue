@@ -1,44 +1,48 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { string } from 'yup'
 
 /**
- * Formulário simples, declarado no próprio componente. `use()` em vez de
- * `build()`: instância local, não entra no catálogo, e o estado não é
- * compartilhado com outra montagem do mesmo componente.
+ * Formulário simples, declarado no próprio componente. Não precisa de wrapper:
+ * o `<script setup>` já é o escopo, então os campos são consts, o derivado é um
+ * `computed`, e o formulário só é montado no fim.
  */
+const campos = fields({
+  name: { label: 'Nome Completo*', value: '', placeholder: 'Digite seu nome completo' },
+  email: { label: 'E-mail*', value: '', placeholder: 'voce@exemplo.com.br' },
+  type: {
+    label: 'Perfil*',
+    value: '' as 'PF' | 'PJ' | '',
+    options: [
+      { label: 'Pessoa Física', value: 'PF' },
+      { label: 'Pessoa Jurídica', value: 'PJ' },
+    ],
+  },
+  cpf: { label: 'CPF*', value: '', mask: 'cpf' },
+  cnpj: { label: 'CNPJ*', value: '', mask: 'cnpj' },
+})
+
+const isPF = computed(() => campos.type.value === 'PF')
+
+addRules(campos, {
+  cpf: { canShow: () => isPF.value, clearWhenHidden: true },
+  cnpj: { canShow: () => campos.type.value === 'PJ', clearWhenHidden: true },
+})
+
+addSchemas(campos, {
+  name: string().required('O nome é obrigatório').min(3, 'Nome muito curto'),
+  email: string().required('O e-mail é obrigatório').email('E-mail inválido'),
+  type: string().required('O perfil é obrigatório'),
+  cpf: string().required('Informe o CPF'),
+  cnpj: string().required('Informe o CNPJ'),
+})
+
 /**
  * Desestruturar é o uso recomendado: `canShow` e `values` chegam como refs e o
  * template desembrulha sozinho. Guardar o objeto inteiro obrigaria a escrever
  * `form.canShow.value.cpf` até no `v-if`.
  */
-const { register, canShow, values, validate } = createFormDomain('dados-do-solicitante')
-  .withFields({
-    name: field({ label: 'Nome Completo*', value: '', placeholder: 'Digite seu nome completo' }),
-    email: field({ label: 'E-mail*', value: '', placeholder: 'voce@exemplo.com.br' }),
-    type: field({
-      label: 'Perfil*',
-      value: '',
-      options: [
-        { label: 'Pessoa Física', value: 'PF' },
-        { label: 'Pessoa Jurídica', value: 'PJ' },
-      ],
-    }),
-    cpf: field({ label: 'CPF*', value: '', mask: 'cpf' }),
-    cnpj: field({ label: 'CNPJ*', value: '', mask: 'cnpj' }),
-  })
-  .withFacts(ctx => ({ isPF: ctx.values.type === 'PF' }))
-  .withRules({
-    cpf: { canShow: ctx => ctx.facts.isPF, clearWhenHidden: true },
-    cnpj: { canShow: ctx => ctx.values.type === 'PJ', clearWhenHidden: true },
-  })
-  .withSchema({
-    name: string().required('O nome é obrigatório').min(3, 'Nome muito curto'),
-    email: string().required('O e-mail é obrigatório').email('E-mail inválido'),
-    type: string().required('O perfil é obrigatório'),
-    cpf: string().required('Informe o CPF'),
-    cnpj: string().required('Informe o CNPJ'),
-  })
-  .use()
+const { register, canShow, values, validate } = useForm(campos)
 
 /**
  * O submit é da lib de formulário do projeto (vee-validate, FormKit...), não

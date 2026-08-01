@@ -1,6 +1,6 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { FieldObj, FieldRule } from './field'
-import type { AnyFields, OnlyKnownKeys, ValuesOf } from './types'
+import type { AnyFields, OnlyKnownKeys, ValuesOf } from './setup-types'
 
 /**
  * Two rules for the same field is almost always a copy-paste, not intent —

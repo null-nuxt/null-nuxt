@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { data, canShow, options, values, outcome, payload, facts, shape, reset } = useFormDomain('justica-federal')
+const { fields: campos, canShow, options, values, payload, shape, reset, isPF, sku, price, resumo } = useFormDomain('justica-federal')
 
 const camposNoSchema = computed(() => Object.keys(shape.value))
 </script>
@@ -8,14 +8,13 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
   <main style="font-family: system-ui; padding: 2rem; display: grid; gap: 1rem; max-width: 46rem">
     <h1>@null-nuxt/form-domain</h1>
     <p style="color:#52525b; font-size:.9rem">
-      Este domínio está separado em <code>fields</code>, <code>rules</code>,
-      <code>schema</code> e <code>outcome</code> — quatro arquivos, um contexto
-      compartilhado.
+      Este domínio é um setup: os campos num arquivo, e cada bloco — documento,
+      região — dono da própria regra e da própria validação.
     </p>
 
     <label>
-      {{ data.tipo_pessoa.label }}
-      <select v-model="data.tipo_pessoa.value">
+      {{ campos.tipoPessoa.label }}
+      <select v-model="campos.tipoPessoa.value">
         <option value="">
           —
         </option>
@@ -29,18 +28,18 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
     </label>
 
     <label v-if="canShow.cpf">
-      {{ data.cpf.label }}
-      <input v-model="data.cpf.value">
+      {{ campos.cpf.label }}
+      <input v-model="campos.cpf.value">
     </label>
 
     <label v-if="canShow.cnpj">
-      {{ data.cnpj.label }}
-      <input v-model="data.cnpj.value">
+      {{ campos.cnpj.label }}
+      <input v-model="campos.cnpj.value">
     </label>
 
     <label v-if="canShow.regiao">
-      {{ data.regiao.label }}
-      <select v-model="data.regiao.value">
+      {{ campos.regiao.label }}
+      <select v-model="campos.regiao.value">
         <option value="">
           —
         </option>
@@ -58,10 +57,10 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
     <FormEcho />
 
     <div style="display:grid; gap:.4rem; background:#f4f4f5; padding:.8rem; border-radius:.4rem; font-size:.82rem">
-      <div><strong>facts</strong>: isPF={{ facts.isPF }} · isPJ={{ facts.isPJ }}</div>
-      <div><strong>outcome</strong>: {{ outcome.sku }} — R$ {{ outcome.price.toFixed(2) }}</div>
+      <div><strong>derivados</strong>: isPF={{ isPF }} · sku={{ sku }}</div>
+      <div><strong>preço</strong>: R$ {{ price.toFixed(2) }}</div>
       <div>
-        <strong>carrinho</strong>: {{ outcome.resumo }}
+        <strong>carrinho</strong>: {{ resumo }}
         <br>
         <small style="opacity:.6">
           o campo guarda <code>{{ values.regiao || '—' }}</code>; o label vem

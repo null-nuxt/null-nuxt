@@ -1,116 +1,113 @@
 <script setup lang="ts">
-import { string } from 'yup'
+import { computed } from 'vue'
+import { object, string } from 'yup'
 
 /**
- * Fixture de tipos do builder. O motivo de o builder existir é a acumulação de
- * tipos: `rules`, `schema` e `meta` precisam enxergar o que `withFacts`
- * devolveu. Se essa acumulação regredir, `ctx.facts` vira `unknown`/`any`,
- * os `@ts-expect-error` ficam sem uso e o typecheck falha aqui.
+ * Fixture de tipos do domínio. Cada `@ts-expect-error` aqui é uma garantia: se
+ * uma deixar de valer, a diretiva fica sem uso e o typecheck falha.
  */
-const useDomain = createFormDomain('domain-guard')
-  .withFields({
-    tipo: field<'PF' | 'PJ' | ''>({ label: 'Tipo', value: '' }),
-    cpf: field({ label: 'CPF', value: '' }),
-  })
-  .withFacts(ctx => ({
-    isPF: ctx.values.tipo === 'PF',
-  }))
-  .withRules({
-    // os facts do passo anterior chegam tipados aqui
-    cpf: { canShow: ctx => ctx.facts.isPF, clearWhenHidden: true },
 
-    // @ts-expect-error fact que não foi declarado
-    tipo: { canShow: ctx => ctx.facts.naoExiste },
+const campos = fields({
+  username: { label: 'Username', value: '' },
+  tipo: { label: 'Tipo', value: '' as 'PF' | 'PJ' | '' },
+  perfil: {
+    label: 'Perfil',
+    value: '',
+    placeholder: 'escolha um',
+    options: [{ label: 'Advogado', value: 'adv' }],
+  },
+})
 
-    // @ts-expect-error campo que não existe em fields
-    sobrenome: { canShow: () => true },
-  })
-  .withSchema(ctx => ctx.shape({
-    cpf: ctx.facts.isPF ? string().required() : string().nullable(),
+addRules(campos, {
+  username: { canShow: () => campos.tipo.value === 'PF', clearWhenHidden: true },
+})
 
-    // @ts-expect-error validar campo que não existe em fields não faz sentido
-    sobrenome: string().required(),
-  }))
-  .withOutcome(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
-  .build()
+// @ts-expect-error campo que não existe em fields
+addRules(campos, { sobrenome: { canShow: () => true } })
 
-/**
- * Camada declarada ANTES de `withFields` não tem como checar chave: sem campos
- * concretos, `keyof F` é `string` e o `OnlyKnownKeys` aceitaria qualquer coisa.
- *
- * O perigoso não era aceitar — era aceitar CALADO, parecendo que checou. A
- * guarda transforma isso em erro que nomeia a causa. Se ela regredir, estes
- * dois `@ts-expect-error` ficam sem uso e o typecheck falha.
- */
-createFormDomain('domain-guard-ordem-rules')
-  // @ts-expect-error rules antes de fields: não há chave que possa ser checada
-  .withRules({ campoQueNaoExiste: { canShow: () => true } })
-  .withFields({ cpf: field({ label: 'CPF', value: '' }) })
-  .build()
+addSchemas(campos, { username: string().required() })
 
-createFormDomain('domain-guard-ordem-schema')
-  // @ts-expect-error schema antes de fields, mesmo motivo
-  .withSchema({ campoQueNaoExiste: string().required() })
-  .withFields({ cpf: field({ label: 'CPF', value: '' }) })
-  .build()
+// @ts-expect-error validar campo que não existe não faz sentido
+addSchemas(campos, { sobrenome: string().required() })
 
-/**
- * O payload é uma PROJEÇÃO: o texto da escolha entra nele sem campo fantasma,
- * e o contexto oferece `values` e `visible` para o projeto escolher qual dos
- * dois vai pro backend.
- */
-const projetado = createFormDomain('domain-guard-payload')
-  .withFields({
-    tipo: field<'PF' | 'PJ' | ''>({ label: 'Tipo', value: '' }),
-    regiao: field({ label: 'Região', value: '', options: [{ label: '1ª Região', value: 'primeira' }] }),
-  })
-  .withFacts(ctx => ({ isPF: ctx.values.tipo === 'PF' }))
-  .withOutcome(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
-  .withPayload(ctx => ({
-    ...ctx.visible,
-    regiao_descricao: ctx.selected.regiao?.label ?? '',
-    price: ctx.outcome.price,
-  }))
-  .use()
+const form = useForm(campos)
 
-// a projeção é tipada a partir da função, não colapsada em Record<string, unknown>
-const descricao: string = projetado.payload.value.regiao_descricao
-const preco: number = projetado.payload.value.price
-
-// @ts-expect-error o payload não declara essa chave
-const semChave = projetado.payload.value.naoExiste
-
-/** Sem `withPayload`, o payload continua sendo `values`. */
-const semProjecao = createFormDomain('domain-guard-payload-ausente')
-  .withFields({ nome: field({ label: 'Nome', value: '' }) })
-  .use()
-
-const nome: string = semProjecao.payload.value.nome
-
-const form = useDomain()
-
-// o tipo de `meta` vem do withOutcome
-const price: number = form.outcome.value.price
-
-// o valor do campo mantém o tipo declarado em fields
+/** O valor mantém a união declarada, atravessando `values`. */
 const tipo: 'PF' | 'PJ' | '' = form.values.value.tipo
-
-// @ts-expect-error meta não tem essa chave
-const semMeta = form.outcome.value.naoExiste
+void tipo
 
 // @ts-expect-error campo fora de fields
-const semCampo = form.data.sobrenome
+form.register('sobrenome')
 
-form.set({ cpf: 'ok' })
+/** Um campo que declara extras recebe as chaves... */
+void form.register('perfil').options
+void form.register('perfil').placeholder
 
-// @ts-expect-error valor com tipo errado pro campo
-form.set({ tipo: 42 })
+// @ts-expect-error ...e um que não declara nenhum não recebe nada
+void form.register('username').options
 
-// @ts-expect-error campo inexistente no patch
-form.set({ sobrenome: 'x' })
+// @ts-expect-error idem para placeholder
+void form.register('username').placeholder
+
+/** O handler tem que servir a um componente com `defineModel<string>()`. */
+const handler: (value: string | undefined) => void = form.register('username')['onUpdate:modelValue']
+void handler
+
+/** `shape` mantém o tipo do yup, então compõe. */
+const schema = form.composeSchema(object)
+void schema.value.describe
+
+/** `visible` é parcial; `values` é completo. */
+const parcial: string | undefined = form.visible.value.username
+const completo: string = form.values.value.username
+void parcial
+void completo
+
+/** Campo avulso entra ao lado das declarações e mantém a precisão. */
+const cpfCompartilhado = field({ label: 'CPF', value: '', mask: 'cpf' })
+const comAvulso = useForm(fields({ cpf: cpfCompartilhado, nome: { label: 'Nome', value: '' } }))
+
+void comAvulso.register('cpf').mask
+
+// @ts-expect-error o campo avulso não declarou placeholder
+void comAvulso.register('cpf').placeholder
+
+/** Domínio: metadata sai da factory, sem instanciar. */
+const domain = defineFormDomain('domain-guard', { title: 'Guarda', order: 1 }, () => {
+  const f = fields({ nome: { label: 'Nome', value: '' } })
+  return { fields: f, gritado: computed(() => f.nome.value.toUpperCase()) }
+}).payload(ctx => ({ ...ctx.visible, gritado: ctx.gritado.value }))
+
+const titulo: string = domain.metadata.title
+void titulo
+
+const instancia = domain()
+
+/** O que o setup expôs além dos campos chega tipado. */
+const gritado: string = instancia.gritado.value
+void gritado
+
+/** E a projeção mantém o tipo do que foi projetado. */
+const projetado: string = instancia.payload.value.gritado
+void projetado
+
+// @ts-expect-error o payload não declara essa chave
+void instancia.payload.value.naoExiste
+
+/** Metadata é opcional. */
+const semMeta = defineFormDomain('domain-guard-sem-meta', () => ({
+  fields: fields({ nome: { label: 'Nome', value: '' } }),
+}))
+
+const nome: string = semMeta().values.value.nome
+void nome
 </script>
 
 <template>
-  <!-- referenciados só pra manter vivas as checagens do script -->
-  <div>{{ price }} {{ tipo }} {{ semMeta }} {{ semCampo }} {{ descricao }} {{ preco }} {{ semChave }} {{ nome }}</div>
+  <div>
+    <!-- o caso que originou tudo: v-bind num componente com defineModel<string>() -->
+    <ModelInput v-bind="form.register('username')" />
+    <ModelInput v-bind="form.register('perfil')" />
+    {{ tipo }} {{ parcial }} {{ completo }} {{ titulo }} {{ gritado }} {{ projetado }} {{ nome }}
+  </div>
 </template>

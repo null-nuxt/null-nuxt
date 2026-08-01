@@ -1,8 +1,8 @@
 import { computed, effectScope, getCurrentScope, onScopeDispose } from 'vue'
-import { getFormRegistry } from '../registry'
+import { getFormRegistry } from './registry'
 import { createEngine } from './engine'
 import type { ComputedRef } from 'vue'
-import type { AnyFields, Exposed, FormEngine, SetupResult, ValuesOf } from './types'
+import type { AnyFields, Exposed, FormEngine, SetupResult, ValuesOf } from './setup-types'
 
 /**
  * A form assembled inside a component. The component's own `setup` is already
@@ -29,12 +29,16 @@ type PayloadContext<S extends SetupResult> = Exposed<S> & {
   visible: Partial<ValuesOf<S['fields']>>
 }
 
-export type FormDomainInstance<S extends SetupResult, P> =
-  FormEngine<S['fields']> & Exposed<S> & { payload: ComputedRef<P> }
+export type FormDomainInstance<S extends SetupResult, P, Id extends string = string> =
+  FormEngine<S['fields']> & Exposed<S> & {
+    /** The literal is preserved: it's what lets `useFormDomain('slug')` type its return. */
+    id: Id
+    payload: ComputedRef<P>
+  }
 
-export interface FormDomain<Meta, S extends SetupResult, P> {
-  (): FormDomainInstance<S, P>
-  id: string
+export interface FormDomain<Meta, S extends SetupResult, P, Id extends string = string> {
+  (): FormDomainInstance<S, P, Id>
+  id: Id
   /**
    * Static, and hung off the factory rather than the instance: a listing reads
    * every domain's metadata without building a single form.
@@ -50,7 +54,7 @@ export interface FormDomain<Meta, S extends SetupResult, P> {
    *
    * One step, so there is no order to get wrong.
    */
-  payload: <P2>(project: (ctx: PayloadContext<S>) => P2) => FormDomain<Meta, S, P2>
+  payload: <P2>(project: (ctx: PayloadContext<S>) => P2) => FormDomain<Meta, S, P2, Id>
 }
 
 /** Factories by slug, registered without instantiating anything. */
@@ -58,13 +62,13 @@ const factories = new Map<string, unknown>()
 
 export const registeredSetupDomains = () => factories
 
-function create<Meta, S extends SetupResult>(
-  id: string,
+function create<Meta, S extends SetupResult, Id extends string>(
+  id: Id,
   metadata: Meta,
   setup: () => S,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   project?: (ctx: any) => unknown,
-): FormDomain<Meta, S, unknown> {
+): FormDomain<Meta, S, unknown, Id> {
   const use = () => {
     const registry = getFormRegistry()
 
@@ -92,6 +96,7 @@ function create<Meta, S extends SetupResult>(
         return {
           ...engine,
           ...exposed,
+          id,
           payload: computed(() =>
             project ? project(payloadContext) : engine.values.value,
           ),
@@ -105,15 +110,15 @@ function create<Meta, S extends SetupResult>(
       registry.set(id, instance)
     }
 
-    return registry.get(id) as FormDomainInstance<S, unknown>
+    return registry.get(id) as FormDomainInstance<S, unknown, Id>
   }
 
   const domain = Object.assign(use, {
     id,
     metadata,
     payload: <P2>(next: (ctx: PayloadContext<S>) => P2) =>
-      create(id, metadata, setup, next) as unknown as FormDomain<Meta, S, P2>,
-  }) as FormDomain<Meta, S, unknown>
+      create(id, metadata, setup, next) as unknown as FormDomain<Meta, S, P2, Id>,
+  }) as FormDomain<Meta, S, unknown, Id>
 
   factories.set(id, domain)
   return domain
@@ -128,15 +133,15 @@ function create<Meta, S extends SetupResult>(
  * else it returns is exposed untouched. Nothing is classified — the engine only
  * needs to know which of them are the fields.
  */
-export function defineFormDomain<S extends SetupResult>(
-  id: string,
+export function defineFormDomain<const Id extends string, S extends SetupResult>(
+  id: Id,
   setup: () => S,
-): FormDomain<object, S, ValuesOf<S['fields']>>
-export function defineFormDomain<Meta extends object, S extends SetupResult>(
-  id: string,
+): FormDomain<object, S, ValuesOf<S['fields']>, Id>
+export function defineFormDomain<const Id extends string, Meta extends object, S extends SetupResult>(
+  id: Id,
   metadata: Meta,
   setup: () => S,
-): FormDomain<Meta, S, ValuesOf<S['fields']>>
+): FormDomain<Meta, S, ValuesOf<S['fields']>, Id>
 export function defineFormDomain(
   id: string,
   second: object | (() => SetupResult),

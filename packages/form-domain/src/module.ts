@@ -4,7 +4,7 @@ import { addImports, addTemplate, createResolver, defineNuxtModule } from '@nuxt
 import type { NuxtModule } from '@nuxt/schema'
 
 export interface ModuleOptions {
-  /** Registers `createFormDomain`, `field` and the catalog composables. */
+  /** Registers `fields`, the `add*` helpers and the catalog composables. */
   autoImports: boolean
   /** Directory scanned for domains, relative to srcDir. */
   domainsDir: string
@@ -63,9 +63,9 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
     const withoutExtension = (file: string) => file.replace(/\.[cm]?[jt]s$/, '')
 
     /**
-     * Map of the project's domains. The catalog imports it both for the side
-     * effect (registering the factories) and for the type (the union of
-     * instances, which gives `useFormDomain('slug')` its typed return).
+     * The project's domains. The catalog reads `id` and `metadata` straight
+     * off these factories, so listing costs no setups; calling one is what
+     * builds a form.
      */
     const domainsTemplate = addTemplate({
       filename: 'null-nuxt-form-domains.ts',
@@ -84,21 +84,17 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
 
     if (options.autoImports) {
       addImports([
-        { name: 'createFormDomain', from: resolver.resolve('./runtime/domain/createFormDomain') },
         { name: 'field', from: resolver.resolve('./runtime/field') },
-        { name: 'useFormDomain', from: resolver.resolve('./runtime/domain/catalog') },
-        { name: 'useFormDomains', from: resolver.resolve('./runtime/domain/catalog') },
-        { name: 'useFormDomainsMetadata', from: resolver.resolve('./runtime/domain/catalog') },
-        { name: 'useFormDomainsOutcome', from: resolver.resolve('./runtime/domain/catalog') },
-
-        // the setup format, being trialled alongside the builder
-        { name: 'fields', from: resolver.resolve('./runtime/setup/field') },
-        { name: 'addRule', from: resolver.resolve('./runtime/setup/register') },
-        { name: 'addRules', from: resolver.resolve('./runtime/setup/register') },
-        { name: 'addSchema', from: resolver.resolve('./runtime/setup/register') },
-        { name: 'addSchemas', from: resolver.resolve('./runtime/setup/register') },
-        { name: 'useForm', from: resolver.resolve('./runtime/setup/define') },
-        { name: 'defineFormDomain', from: resolver.resolve('./runtime/setup/define') },
+        { name: 'fields', from: resolver.resolve('./runtime/field') },
+        { name: 'addRule', from: resolver.resolve('./runtime/register') },
+        { name: 'addRules', from: resolver.resolve('./runtime/register') },
+        { name: 'addSchema', from: resolver.resolve('./runtime/register') },
+        { name: 'addSchemas', from: resolver.resolve('./runtime/register') },
+        { name: 'useForm', from: resolver.resolve('./runtime/define') },
+        { name: 'defineFormDomain', from: resolver.resolve('./runtime/define') },
+        { name: 'useFormDomain', from: resolver.resolve('./runtime/catalog') },
+        { name: 'useFormDomains', from: resolver.resolve('./runtime/catalog') },
+        { name: 'useFormDomainsMetadata', from: resolver.resolve('./runtime/catalog') },
       ])
     }
   },

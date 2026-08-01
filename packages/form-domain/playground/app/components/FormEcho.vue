@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import useJusticaFederalForm from '../forms/justica-federal';
+import useJusticaFederalForm from '../forms/justica-federal'
 
 /**
  * Sub-componente do mesmo domínio: consome a instância sem receber prop nenhuma
@@ -10,7 +10,7 @@ const { values, canShow } = useJusticaFederalForm()
 
 <template>
   <div style="border-left: 3px solid #ddd; padding-left: .75rem; font-size: .875rem">
-    <strong>sub-componente</strong> — tipo: {{ values.tipo_pessoa || '—' }} |
+    <strong>sub-componente</strong> — tipo: {{ values.tipoPessoa || '—' }} |
     mostra cpf: {{ canShow.cpf }}
   </div>
 </template>
