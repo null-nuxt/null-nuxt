@@ -228,13 +228,16 @@ export type ResolvedShape<S, R> = Prettify<
 export interface FormDomainInstance<
   F extends FieldsDef,
   C,
-  M,
+  O,
   Id extends string = string,
   S = object,
   R = object,
+  Meta = object,
 > {
   /** The literal is preserved: it's what lets `useFormDomain('slug')` type its return. */
   id: Id
+  /** The catalog entry. Static, so it reads the same here and off the factory. */
+  metadata: Meta
   /** Reactive object: this is where `v-model` writes. */
   data: FormData<F>
   values: ComputedRef<FormValues<F>>
@@ -267,12 +270,34 @@ export interface FormDomainInstance<
   composeSchema: <T>(combine: (shape: ResolvedShape<S, R>) => T) => ComputedRef<T>
   /** Validates only what's visible. Hidden fields aren't required. */
   validate: () => Promise<ValidationResult<FormValues<F>>>
-  outcome: ComputedRef<M>
+  /** What results from filling this in: price, sku, the cart line. */
+  outcome: ComputedRef<O>
   set: (patch: Partial<FormValues<F>>) => void
   reset: () => void
   dispose: () => void
   /** Ready-made input props: `<Input v-bind="form.register('email')" />`. */
   register: <K extends keyof F & string>(key: K) => FieldBindings<F, R, K>
+}
+
+/**
+ * What `build()` hands back: the composable, with the static parts hung off it.
+ *
+ * They live on the FUNCTION rather than on the instance alone so a catalog can
+ * read `id` and `metadata` without calling it. Listing 300 certificates should
+ * not create 300 effect scopes to render 300 links.
+ */
+export interface FormDomainFactory<
+  F extends FieldsDef,
+  C,
+  O,
+  Id extends string = string,
+  S = object,
+  R = object,
+  Meta = object,
+> {
+  (): FormDomainInstance<F, C, O, Id, S, R, Meta>
+  id: Id
+  metadata: Meta
 }
 
 /**
@@ -284,12 +309,23 @@ export interface FormDomainInstance<
 export interface FormDomainBuilder<
   F extends FieldsDef,
   C,
-  M,
+  O,
   Id extends string = string,
   S = object,
   R = object,
+  Meta = object,
 > {
-  withFields: <F2 extends FieldsDef>(fields: F2) => FormDomainBuilder<F2, C, M, Id, S, R>
+  /**
+   * The catalog entry: what this domain IS, before anyone fills anything in —
+   * title, route, category, keywords, ordering, which component renders it.
+   *
+   * Static, and that is the point rather than a style choice: being static it
+   * is attached to the FACTORY, so a listing page reads every domain's
+   * metadata without instantiating a single one. `outcome` cannot do that — a
+   * price that depends on the person type needs a filled form.
+   */
+  withMetadata: <Meta2 extends object>(metadata: Meta2) => FormDomainBuilder<F, C, O, Id, S, R, Meta2>
+  withFields: <F2 extends FieldsDef>(fields: F2) => FormDomainBuilder<F2, C, O, Id, S, R, Meta>
 
   /**
    * The shared conclusions the rest of the domain reads. Named `facts` rather
@@ -299,7 +335,7 @@ export interface FormDomainBuilder<
    */
   withFacts: <C2 extends object>(
     derive: (ctx: FieldsContext<F>) => C2,
-  ) => FormDomainBuilder<F, C2, M, Id, S, R>
+  ) => FormDomainBuilder<F, C2, O, Id, S, R, Meta>
 
   /**
    * `R2` is carried forward, not discarded: `register()` needs to know whether a
@@ -308,7 +344,7 @@ export interface FormDomainBuilder<
    */
   withRules: <R2>(
     rules: R2 & DomainRules<F, C> & OnlyKnownKeys<R2, keyof F & string>,
-  ) => FormDomainBuilder<F, C, M, Id, S, R2>
+  ) => FormDomainBuilder<F, C, O, Id, S, R2, Meta>
 
   /**
    * The same double defence as `rules`, for the same reason: with a union target
@@ -322,22 +358,22 @@ export interface FormDomainBuilder<
   withSchema: {
     <S2>(
       shape: S2 & DomainSchemaShape<NoInfer<F>> & OnlyKnownKeys<S2, keyof F & string>,
-    ): FormDomainBuilder<F, C, M, Id, S2, R>
+    ): FormDomainBuilder<F, C, O, Id, S2, R, Meta>
     <S2 extends DomainSchemaShape<F>>(
       build: (ctx: SchemaContext<F, C>) => S2,
-    ): FormDomainBuilder<F, C, M, Id, S2, R>
+    ): FormDomainBuilder<F, C, O, Id, S2, R, Meta>
   }
 
-  withOutcome: <M2 extends object>(
-    outcome: DomainOutcome<F, C, M2>,
-  ) => FormDomainBuilder<F, C, M2, Id, S, R>
+  withOutcome: <O2 extends object>(
+    outcome: DomainOutcome<F, C, O2>,
+  ) => FormDomainBuilder<F, C, O2, Id, S, R, Meta>
 
   /**
    * Ends the type accumulation and returns the domain's composable, registered
    * by slug: every caller receives the SAME instance. This is the path for
    * domains under `<srcDir>/forms`.
    */
-  build: () => () => FormDomainInstance<F, C, M, Id, S, R>
+  build: () => FormDomainFactory<F, C, O, Id, S, R, Meta>
 
   /**
    * A LOCAL instance, created on the spot — for a simple form declared inside
@@ -346,7 +382,7 @@ export interface FormDomainBuilder<
    *
    * Watchers are bound to the caller's scope and die with it.
    */
-  use: () => FormDomainInstance<F, C, M, Id, S, R>
+  use: () => FormDomainInstance<F, C, O, Id, S, R, Meta>
 }
 
 /**
@@ -355,11 +391,11 @@ export interface FormDomainBuilder<
  * files: `rules.ts` imports the TYPE of the partial domain instead of trying to
  * reconstruct it, which would cause a circular import.
  */
-export type ContextOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
+export type ContextOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta>
   ? DomainContext<F, C>
   : never
 
-export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
+export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta>
   ? DomainRules<F, C>
   : never
 
@@ -368,10 +404,10 @@ export type RulesOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M,
  * would stop `withSchema`'s overloads from picking the right signature. The
  * unknown-key check happens here, at the declaration.
  */
-export type SchemaOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
+export type SchemaOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta>
   ? (ctx: SchemaContext<F, C>) => DomainSchemaShape<F>
   : never
 
-export type OutcomeOf<B, M extends object> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
+export type OutcomeOf<B, M extends object> = B extends FormDomainBuilder<infer F, infer C, infer _O, infer _Id, infer _S, infer _R, infer _Meta>
   ? DomainOutcome<F, C, M>
   : never

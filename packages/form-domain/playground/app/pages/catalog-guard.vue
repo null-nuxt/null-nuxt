@@ -5,7 +5,7 @@
  */
 const domain = useFormDomain('justica-federal')
 
-// meta específica deste domínio
+// outcome específico deste domínio
 const sku: string = domain.outcome.value.sku
 const price: number = domain.outcome.value.price
 
@@ -15,13 +15,25 @@ const isPF: boolean = domain.facts.value.isPF
 // @ts-expect-error slug que não existe entre os domínios descobertos
 useFormDomain('nao-existe')
 
-// @ts-expect-error meta deste domínio não tem essa chave
-const semMeta = domain.outcome.value.naoExiste
+// @ts-expect-error o outcome deste domínio não tem essa chave
+const semOutcome = domain.outcome.value.naoExiste
 
 const todos = useFormDomains()
 const quantos: number = todos.length
+
+/**
+ * O catálogo lê metadata SEM instanciar: o `title` sai da factory, não de uma
+ * instância. Se isso regredir para uma leitura de instância, a listagem volta a
+ * criar um effect scope por domínio.
+ */
+const catalogo = useFormDomainsMetadata()
+const titulo: string | undefined = catalogo[0]?.metadata.title
+const ordem: number | undefined = catalogo[0]?.metadata.order
+
+// @ts-expect-error metadata não declara essa chave
+const semMetadata = catalogo[0]?.metadata.naoExiste
 </script>
 
 <template>
-  <div>{{ sku }} {{ price }} {{ isPF }} {{ semMeta }} {{ quantos }}</div>
+  <div>{{ sku }} {{ price }} {{ isPF }} {{ semOutcome }} {{ quantos }} {{ titulo }} {{ ordem }} {{ semMetadata }}</div>
 </template>

@@ -4,6 +4,9 @@ import { registeredDomains } from './createFormDomain'
 /** Every domain composable discovered under `<srcDir>/forms`. */
 type Factories = typeof domains
 
+/** The factories themselves, which is where the static parts live. */
+type Factory = Factories[number]
+
 /** The union of every instance — where the typed lookup by slug comes from. */
 export type AnyFormDomain = Factories extends readonly (() => infer I)[] ? I : never
 
@@ -42,7 +45,24 @@ export function useFormDomains(): AnyFormDomain[] {
   return domains.map(use => use()) as AnyFormDomain[]
 }
 
-/** The outcome of every domain, which is what a catalog page usually wants. */
+/**
+ * Every domain's catalog entry, WITHOUT instantiating any of them — this is the
+ * one a listing page wants. `metadata` is static, so it is read straight off
+ * the factory: 300 certificates cost 300 property reads, not 300 effect scopes.
+ *
+ * Not a composable in any real sense — there is no reactive state to own — but
+ * it keeps the `useX` name the rest of the catalog uses.
+ */
+export function useFormDomainsMetadata(): Array<Pick<Factory, 'id' | 'metadata'>> {
+  return domains.map(factory => ({ id: factory.id, metadata: factory.metadata }))
+}
+
+/**
+ * Every domain's outcome. Unlike the metadata listing, this one INSTANTIATES
+ * every domain, because an outcome is a function of a filled form. Use it when
+ * you genuinely need the reactive values; reach for `useFormDomainsMetadata`
+ * for a catalog.
+ */
 export function useFormDomainsOutcome() {
   return useFormDomains().map(domain => ({
     id: (domain as { id: string }).id,

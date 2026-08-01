@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { string } from 'yup'
 import { createFormDomain } from '../src/runtime/domain/createFormDomain'
 import { field } from '../src/runtime/field'
+import { getFormRegistry } from '../src/runtime/registry'
 
 type Pessoa = 'PF' | 'PJ' | ''
 
@@ -637,6 +638,43 @@ describe('register: props prontas pro input', () => {
 
     form.register('nome')['onUpdate:modelValue']('Ana')
     expect(form.values.value.nome).toBe('Ana')
+  })
+})
+
+describe('metadata: entrada de catálogo', () => {
+  const definirComMetadata = (id: string) =>
+    createFormDomain(id)
+      .withMetadata({ title: 'Certidão X', to: '/x', order: 10 })
+      .withFields({ nome: field({ label: 'Nome', value: '' }) })
+
+  /**
+   * A razão de `metadata` existir separado do `outcome`: uma listagem de
+   * catálogo precisa de título e rota sem que exista formulário preenchido
+   * nenhum. Se isto voltar a sair da instância, listar 300 certidões volta a
+   * criar 300 effect scopes.
+   */
+  it('lê metadata da factory sem instanciar o domínio', () => {
+    const useForm = definirComMetadata('metadata-sem-instancia').build()
+
+    expect(useForm.metadata.title).toBe('Certidão X')
+    expect(useForm.id).toBe('metadata-sem-instancia')
+    expect(getFormRegistry().has('metadata-sem-instancia')).toBe(false)
+
+    useForm()
+    expect(getFormRegistry().has('metadata-sem-instancia')).toBe(true)
+  })
+
+  it('a instância também expõe metadata, com o mesmo conteúdo', () => {
+    const useForm = definirComMetadata('metadata-na-instancia').build()
+    expect(useForm().metadata).toEqual(useForm.metadata)
+  })
+
+  it('domínio sem metadata declarada recebe um objeto vazio', () => {
+    const form = createFormDomain('metadata-ausente')
+      .withFields({ nome: field({ label: 'Nome', value: '' }) })
+      .use()
+
+    expect(form.metadata).toEqual({})
   })
 })
 

@@ -17,6 +17,7 @@ import type {
 
 interface Definition {
   id: string
+  metadata: object
   fields: FieldsDef
   derive?: (ctx: unknown) => Record<string, unknown>
   rules?: DomainRules<FieldsDef, unknown>
@@ -256,6 +257,7 @@ function createInstance(definition: Definition) {
 
     return {
       id: definition.id,
+      metadata: definition.metadata,
       data,
       // refs, not getters: destructuring a getter copies the value and kills
       // reactivity — and destructuring is how composables are used in Vue
@@ -318,9 +320,13 @@ export const registeredDomains = () => factories
 export function createFormDomain<const Id extends string>(
   id: Id,
 ): FormDomainBuilder<FieldsDef, unknown, object, Id> {
-  const definition = { id, fields: {} } as Definition
+  const definition = { id, metadata: {}, fields: {} } as Definition
 
   const builder = {
+    withMetadata(metadata: object) {
+      definition.metadata = metadata
+      return builder
+    },
     withFields(fields: FieldsDef) {
       definition.fields = fields
       return builder
@@ -342,13 +348,21 @@ export function createFormDomain<const Id extends string>(
       return builder
     },
     build() {
-      const use = () => {
-        const registry = getFormRegistry()
-        if (!registry.has(definition.id)) {
-          registry.set(definition.id, createInstance(definition))
-        }
-        return registry.get(definition.id) as FormDomainInstance<FieldsDef, unknown, object, Id>
-      }
+      /**
+       * `id` and `metadata` ride on the function itself, not only on the
+       * instance: that's what lets a catalog list every domain without calling
+       * any of them.
+       */
+      const use = Object.assign(
+        () => {
+          const registry = getFormRegistry()
+          if (!registry.has(definition.id)) {
+            registry.set(definition.id, createInstance(definition))
+          }
+          return registry.get(definition.id) as FormDomainInstance<FieldsDef, unknown, object, Id>
+        },
+        { id: definition.id, metadata: definition.metadata },
+      )
 
       factories.set(definition.id, use)
       return use
