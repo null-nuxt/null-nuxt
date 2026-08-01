@@ -14,13 +14,32 @@ export type AnyFields = Record<string, FieldObj<any, any>>
 export type ValuesOf<F extends AnyFields> = { [K in keyof F]: F[K]['value'] }
 
 /**
+ * Whether the field declared `options` at all — an empty list counts, and is how
+ * a field says "I am a select, the list comes later".
+ *
+ * Declaring it is what lets a rule derive the list, and what puts the field into
+ * `options` and `selected`. Without that marker those two would have to list
+ * every field, typing a plain text input as though it could hold a choice.
+ */
+export type HasOptions<F extends AnyFields, K extends keyof F> =
+  'options' extends keyof NonNullable<F[K]['__declared']> ? true : false
+
+/** Only the fields that declared options. */
+export type OptionFields<F extends AnyFields> = {
+  [K in keyof F as HasOptions<F, K> extends true ? K : never]: F[K]
+}
+
+/**
  * The option matching each field's current value, resolved from the effective
  * list. The field still stores only the value — storing the whole object would
  * break `v-model` by identity, break `oneOf`, and send an object where the API
  * expects a scalar.
+ *
+ * Keyed by the fields that can actually hold a choice, so a text input is not
+ * typed as though it might.
  */
 export type SelectedOptions<F extends AnyFields> = {
-  [K in keyof F]: FieldOption<F[K]['value']> | undefined
+  [K in keyof OptionFields<F>]: FieldOption<F[K]['value']> | undefined
 }
 
 /**
@@ -99,7 +118,7 @@ export interface FormEngine<F extends AnyFields> {
    * require the raw fields — that was the one thing consumers needed them for.
    */
   selected: ComputedRef<SelectedOptions<F>>
-  options: ComputedRef<{ [K in keyof F]: ReadonlyArray<FieldOption<F[K]['value']>> }>
+  options: ComputedRef<{ [K in keyof OptionFields<F>]: ReadonlyArray<FieldOption<F[K]['value']>> }>
   /** Validators for the visible fields, with the types you declared. */
   shape: ComputedRef<Record<string, unknown>>
   /**

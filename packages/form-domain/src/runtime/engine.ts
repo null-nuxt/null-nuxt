@@ -41,15 +41,21 @@ export function createEngine<F extends AnyFields>(fields: F): FormEngine<F> {
     return result as Partial<ValuesOf<F>>
   })
 
+  /**
+   * Only the fields that declared `options`. Keyed the same way as the type, so
+   * a text input is neither typed nor listed as though it held a choice.
+   */
+  const optionKeys = keys.filter(key => fields[key]!.declaredOptions !== undefined)
+
   const selected = computed(() => {
     const result: Record<string, FieldOption<unknown> | undefined> = {}
-    for (const key of keys) result[key] = fields[key]!.selected
+    for (const key of optionKeys) result[key] = fields[key]!.selected
     return result as SelectedOptions<F>
   })
 
   const options = computed(() => {
     const result: Record<string, ReadonlyArray<FieldOption<unknown>>> = {}
-    for (const key of keys) {
+    for (const key of optionKeys) {
       const target = fields[key]!
       // the rule wins over the list declared on the field
       result[key] = target.rule?.options ? target.rule.options() : (target.declaredOptions ?? [])

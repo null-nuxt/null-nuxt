@@ -18,7 +18,12 @@ export const declaration = {
   personType: { label: 'Person type', value: '' as PersonType },
   cpf: { label: 'CPF', value: '', mask: 'cpf' },
   cnpj: { label: 'CNPJ', value: '', mask: 'cnpj' },
-  region: { label: 'Region', value: '' },
+  /**
+   * The empty list is the marker, not an oversight: declaring `options` is how a
+   * field says it holds a choice. That is what lets `region.ts` derive the list,
+   * and what keeps `form.options` and `form.selected` from listing text inputs.
+   */
+  region: { label: 'Region', value: '', options: [] as { label: string, value: string }[] },
   notes: { label: 'Notes', value: '' },
 }
 

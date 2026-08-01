@@ -13,7 +13,8 @@ const build = () => {
     personType: { label: 'Person type', value: '' as PersonType },
     cpf: { label: 'CPF', value: '' },
     cnpj: { label: 'CNPJ', value: '' },
-    region: { label: 'Region', value: '' },
+    // the empty list is the marker: only a field that declares options gets them
+    region: { label: 'Region', value: '', options: [] as { label: string, value: string }[] },
   })
 
   addRules(f, {
@@ -413,7 +414,8 @@ describe('options and schema agreeing', () => {
   const withRegion = () => {
     const f = refFields({
       kind: { label: 'Kind', value: '' as PersonType },
-      region: { label: 'Region', value: '' },
+      // the empty list is the marker: only a field that declares options gets them
+    region: { label: 'Region', value: '', options: [] as { label: string, value: string }[] },
     })
 
     const list = () => {
@@ -636,5 +638,46 @@ describe('an inert declaration at module scope', () => {
   it('the declared options reach register', () => {
     const form = toForm(refFields(declaration))
     expect(form.register('profile').options?.map(o => o.value)).toEqual(['adv'])
+  })
+})
+
+describe('only declared choices are choices', () => {
+  /**
+   * `options` and `selected` used to be keyed by EVERY field, which typed a
+   * plain text input as though it could hold a choice — the same mistake
+   * `register()` had before its extras were made per-field.
+   *
+   * Declaring `options`, even empty, is the marker. It says "this field holds a
+   * choice, the list comes later", and it is what lets a rule derive one.
+   */
+  const withChoice = () => {
+    const f = refFields({
+      name: { label: 'Name', value: '' },
+      city: { label: 'City', value: '', options: [] as { label: string, value: string }[] },
+    })
+
+    addRules(f, { city: { options: () => [{ label: 'Recife', value: 'recife' }] } })
+
+    return f
+  }
+
+  it('lists only the fields that declared options', () => {
+    const form = toForm(withChoice())
+
+    expect(Object.keys(form.options.value)).toEqual(['city'])
+    expect(Object.keys(form.selected.value)).toEqual(['city'])
+  })
+
+  it('the declared marker is what lets a rule derive the list', () => {
+    const form = toForm(withChoice())
+    expect(form.options.value.city.map(o => o.value)).toEqual(['recife'])
+  })
+
+  it('a field declaring a static list needs no rule', () => {
+    const form = toForm(refFields({
+      profile: { label: 'Profile', value: '', options: [{ label: 'Lawyer', value: 'adv' }] },
+    }))
+
+    expect(form.options.value.profile.map(o => o.value)).toEqual(['adv'])
   })
 })

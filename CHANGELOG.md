@@ -11,6 +11,22 @@ predates that and is kept only so existing pins keep resolving.
 
 ## [Unreleased]
 
+### `@null-nuxt/form-domain` — Changed
+
+- **`options` and `selected` are keyed by the fields that declared options**,
+  not by every field. They used to type a plain text input as though a choice
+  might land in it — the same mistake `register()` had before its extras were
+  made per-field.
+
+  A field declares `options` to say it holds a choice; an empty list counts and
+  reads as "the list comes later". That marker is now also what lets a rule
+  derive the list: `addRules` rejects `options` on a field that never declared
+  any, since deriving a list for something that never said it was a select is a
+  mistake the types can catch.
+
+  Breaking for a field that took its options only from a rule — add
+  `options: []` to its declaration.
+
 ### `@null-nuxt/form-domain` — Fixed
 
 - **`refFields` checks an option's value against its own field again.** The
@@ -250,6 +266,22 @@ it is listed under `Added` rather than split across change types.
 - **Build-time configuration** through a generated virtual module rather than
   `runtimeConfig.public`, keeping it out of the SSR payload.
 - **Consent gate**: nothing is sent while consent is false.
+
+### `@null-nuxt/form-domain` — Changed
+
+- **`options` and `selected` are keyed by the fields that declared options**,
+  not by every field. They used to type a plain text input as though a choice
+  might land in it — the same mistake `register()` had before its extras were
+  made per-field.
+
+  A field declares `options` to say it holds a choice; an empty list counts and
+  reads as "the list comes later". That marker is now also what lets a rule
+  derive the list: `addRules` rejects `options` on a field that never declared
+  any, since deriving a list for something that never said it was a select is a
+  mistake the types can catch.
+
+  Breaking for a field that took its options only from a rule — add
+  `options: []` to its declaration.
 
 ### `@null-nuxt/form-domain` — Fixed
 

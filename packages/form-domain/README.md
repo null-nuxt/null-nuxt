@@ -177,7 +177,7 @@ the whole function instead of the offending key.
 |---|---|
 | `canShow` | hides the field, and drops it from validation |
 | `clearWhenHidden` | resets it to its initial value once hidden |
-| `options` | a derived list; wins over the one declared on the field |
+| `options` | a derived list; wins over the one declared on the field, and only for a field that declared one |
 | `onChange` | a side effect, writing through `ctx.patch()` |
 
 `canShow` returning false removes the field from validation. That's what erases
@@ -252,6 +252,31 @@ const model = defineModel<string>()  // emits string | undefined
 Under `strictFunctionTypes` a handler taking only `string` is **not** assignable
 to that, and `v-bind` would fail to compile on the most common way to write an
 input.
+
+## Only declared choices are choices
+
+A field says it holds a choice by declaring `options` — an empty list counts,
+and is how you say "this is a select, the list comes later":
+
+```ts
+refFields({
+  name: { label: 'Name', value: '' },
+  city: { label: 'City', value: '', options: [] as { label: string, value: string }[] },
+})
+```
+
+That marker does two things. It lets a rule derive the list — `addRules` rejects
+`options` on a field that never declared any — and it keys `form.options` and
+`form.selected` to the fields that can actually hold one:
+
+```ts
+form.options.city      // ok
+form.selected.city     // ok
+form.options.name      // ✗ this field is not a choice
+```
+
+Without it both would have to list every field, typing a plain text input as
+though a choice might land in it.
 
 ## The option's label
 

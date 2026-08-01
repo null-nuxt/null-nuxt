@@ -1,6 +1,6 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { FieldObj, FieldRule } from './field'
-import type { AnyFields, OnlyKnownKeys, ValuesOf } from './types'
+import type { AnyFields, FieldOption, HasOptions, OnlyKnownKeys, ValuesOf } from './types'
 
 /**
  * Two rules for the same field is almost always a copy-paste, not intent —
@@ -37,10 +37,23 @@ export function addRule<TValue, TValues>(
  * what puts the compiler's finger on the offending key: from an arrow's return
  * the same check still fires, but the error lands on the whole function.
  */
+/**
+ * The rule a given field accepts. `options` is only among them when the field
+ * declared `options` in the first place — deriving a list for something that
+ * never said it was a select is a mistake the types can catch, and requiring the
+ * declaration is also what lets `form.options` and `form.selected` be keyed by
+ * the fields that can hold a choice.
+ */
+export type RuleFor<F extends AnyFields, K extends keyof F> =
+  Omit<FieldRule<F[K]['value'], ValuesOf<F>>, 'options'>
+  & (HasOptions<F, K> extends true
+    ? { options?: () => ReadonlyArray<FieldOption<F[K]['value']>> }
+    : { options?: never })
+
 export function addRules<F extends AnyFields, R>(
   fields: F,
   rules: R
-    & { [K in keyof F]?: FieldRule<F[K]['value'], ValuesOf<F>> }
+    & { [K in keyof F]?: RuleFor<F, K> }
     & OnlyKnownKeys<R, keyof F & string>,
 ): void {
   for (const [key, rule] of Object.entries(rules as Record<string, unknown>)) {

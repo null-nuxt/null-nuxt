@@ -57,6 +57,35 @@ void handler
 const schema = form.composeSchema(object)
 void schema.value.describe
 
+/**
+ * Only a field that declared `options` is a choice — so only those appear in
+ * `options` and `selected`. Before this, both listed EVERY field, typing a plain
+ * text input as though it might hold one.
+ */
+void form.options.value.profile
+void form.selected.value.profile
+
+// @ts-expect-error `username` declared no options, so it is not a choice
+void form.options.value.username
+
+// @ts-expect-error and it can never have a selected one
+void form.selected.value.username
+
+/** Declaring the list is also what lets a rule derive it. */
+const withChoice = refFields({
+  state: { label: 'State', value: '' },
+  city: { label: 'City', value: '', options: [] as { label: string, value: string }[] },
+})
+
+addRules(withChoice, {
+  city: { options: () => withChoice.state.value ? [{ label: 'Recife', value: 'recife' }] : [] },
+})
+
+addRules(withChoice, {
+  // @ts-expect-error `state` never said it holds a choice, so it gets no options
+  state: { options: () => [] },
+})
+
 /** `selected` comes off the engine, with no need for the raw fields. */
 const chosen: string | undefined = form.selected.value.profile?.label
 void chosen
