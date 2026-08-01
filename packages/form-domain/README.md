@@ -10,7 +10,7 @@ yup 1.7+.
 ## Installation
 
 ```bash
-pnpm add "github:null-nuxt/null-nuxt#form-domain@0.4.0&path:/packages/form-domain"
+pnpm add "github:null-nuxt/null-nuxt#form-domain@0.5.0&path:/packages/form-domain"
 ```
 
 Each package is tagged on its own, since they are versioned and pinned

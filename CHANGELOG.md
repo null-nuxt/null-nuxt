@@ -5,13 +5,20 @@ All notable changes to this project are documented here. The format follows
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 independently.
 
-Each package is tagged on its own — `form-domain@0.4.0`, `tracking@0.1.0` —
+Each package is tagged on its own — `form-domain@0.5.0`, `tracking@0.1.0` —
 because they are installed and pinned separately. The repo-wide `v0.1.0` tag
 predates that and is kept only so existing pins keep resolving.
 
 ## [Unreleased]
 
-### `@null-nuxt/form-domain` — Changed
+Nothing yet.
+
+## `@null-nuxt/form-domain` 0.5.0 — 2026-08-01
+
+Mostly about one question the types had been answering wrongly: which fields
+can hold a choice. Everything breaking here follows from settling it.
+
+### Changed
 
 - **`options` and `selected` are keyed by the fields that declared options**,
   not by every field. They used to type a plain text input as though a choice
@@ -20,7 +27,7 @@ predates that and is kept only so existing pins keep resolving.
 
   A field declares `options` to say it holds a choice; an empty list counts and
   reads as "the list comes later". That marker is now also what lets a rule
-  derive the list: `addRules` rejects `options` on a field that never declared
+  derive the list: `addRules` rejects `deriveOptions` on a field that never declared
   any, since deriving a list for something that never said it was a select is a
   mistake the types can catch.
 
@@ -37,7 +44,7 @@ predates that and is kept only so existing pins keep resolving.
   otherwise from a type error. The verb also stops the key reading as a setting
   of `addRules` itself, which is what the other rule keys are not.
 
-### `@null-nuxt/form-domain` — Fixed
+### Fixed
 
 - **`refFields` checks an option's value against its own field again.** The
   guarantee held through `refField()` and not through `refFields()`, which is
@@ -52,7 +59,7 @@ predates that and is kept only so existing pins keep resolving.
   declaration is what opened the gap — and the README kept claiming the
   guarantee in 0.3.0 and 0.4.0.
 
-### `@null-nuxt/form-domain` — Added
+### Added
 
 - **Fields in their own file are now an inert declaration**, not a factory.
   What sits at module scope is plain data, so there is no reactive state to
@@ -286,7 +293,7 @@ it is listed under `Added` rather than split across change types.
 
   A field declares `options` to say it holds a choice; an empty list counts and
   reads as "the list comes later". That marker is now also what lets a rule
-  derive the list: `addRules` rejects `options` on a field that never declared
+  derive the list: `addRules` rejects `deriveOptions` on a field that never declared
   any, since deriving a list for something that never said it was a select is a
   mistake the types can catch.
 
@@ -303,7 +310,7 @@ it is listed under `Added` rather than split across change types.
   otherwise from a type error. The verb also stops the key reading as a setting
   of `addRules` itself, which is what the other rule keys are not.
 
-### `@null-nuxt/form-domain` — Fixed
+### Fixed
 
 - **`refFields` checks an option's value against its own field again.** The
   guarantee held through `refField()` and not through `refFields()`, which is
@@ -354,5 +361,5 @@ it is listed under `Added` rather than split across change types.
   helpers, which extract the context from a partial builder and avoid a
   circular import.
 
-[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.4.0...HEAD
+[Unreleased]: https://github.com/null-nuxt/null-nuxt/compare/form-domain@0.5.0...HEAD
 [0.1.0]: https://github.com/null-nuxt/null-nuxt/releases/tag/v0.1.0
