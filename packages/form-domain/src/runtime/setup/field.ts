@@ -33,7 +33,13 @@ export interface FieldRule<TValue, TValues> {
  * until it is put into a form, and `field()` has to work for a field declared
  * on its own to be reused across domains.
  */
-export interface FieldObj<TValue, TValues = Record<string, unknown>> {
+export interface FieldObj<TValue, TValues = Record<string, unknown>, TDeclared = FieldInput<TValue>> {
+  /**
+   * The declaration AS WRITTEN, kept only as a type. `register()` reads it to
+   * know whether this field declares `options`, `placeholder` or `mask` at all
+   * — the interface below has them optional, so it cannot answer that.
+   */
+  readonly __declared?: TDeclared
   label: string
   value: TValue
   key: string
@@ -106,7 +112,8 @@ const createField = <TValue>(input: FieldInput<TValue>): FieldObj<TValue> => {
  */
 export const field = <TValue, TInput extends FieldInput<TValue> = FieldInput<TValue>>(
   input: TInput & { value: TValue },
-): FieldObj<TInput['value']> => createField(input) as FieldObj<TInput['value']>
+): FieldObj<TInput['value'], Record<string, unknown>, TInput> =>
+  createField(input) as FieldObj<TInput['value'], Record<string, unknown>, TInput>
 
 /** A field object, or the declaration to build one from. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,8 +124,15 @@ export type FieldsInput = Record<string, FieldSource>
 /** The value a source carries, whether it arrived built or as a declaration. */
 export type ValueOfSource<T> = T extends FieldObj<infer V> ? V : T extends FieldInput<infer V> ? V : never
 
+/** What the source declared, so the extras stay answerable after assembly. */
+export type DeclaredOfSource<T> = T extends FieldObj<infer _V, infer _Vs, infer D> ? D : T
+
 export type BuiltFields<T extends FieldsInput> = {
-  [K in keyof T]: FieldObj<ValueOfSource<T[K]>, { [K2 in keyof T]: ValueOfSource<T[K2]> }>
+  [K in keyof T]: FieldObj<
+    ValueOfSource<T[K]>,
+    { [K2 in keyof T]: ValueOfSource<T[K2]> },
+    DeclaredOfSource<T[K]>
+  >
 }
 
 /**

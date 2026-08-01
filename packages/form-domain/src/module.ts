@@ -90,6 +90,15 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
         { name: 'useFormDomains', from: resolver.resolve('./runtime/domain/catalog') },
         { name: 'useFormDomainsMetadata', from: resolver.resolve('./runtime/domain/catalog') },
         { name: 'useFormDomainsOutcome', from: resolver.resolve('./runtime/domain/catalog') },
+
+        // the setup format, being trialled alongside the builder
+        { name: 'fields', from: resolver.resolve('./runtime/setup/field') },
+        { name: 'addRule', from: resolver.resolve('./runtime/setup/register') },
+        { name: 'addRules', from: resolver.resolve('./runtime/setup/register') },
+        { name: 'addSchema', from: resolver.resolve('./runtime/setup/register') },
+        { name: 'addSchemas', from: resolver.resolve('./runtime/setup/register') },
+        { name: 'useForm', from: resolver.resolve('./runtime/setup/define') },
+        { name: 'defineFormDomain', from: resolver.resolve('./runtime/setup/define') },
       ])
     }
   },

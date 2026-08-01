@@ -26,15 +26,35 @@ export type OnlyKnownKeys<T, Allowed extends string> = string extends Allowed
   : { [K in keyof T]: K extends Allowed ? T[K] : never }
 
 /**
- * The extras an input may receive. Only the ones the field can actually
- * produce reach the bindings — a key the component doesn't declare would land
- * as a stray DOM attribute.
+ * The extras an input may receive. All optional: the engine only emits the ones
+ * that have a value at runtime, because `v-bind` of a key the component doesn't
+ * declare lands as a stray DOM attribute.
  */
 interface FieldExtras<TValue> {
   options?: ReadonlyArray<FieldOption<TValue>>
   placeholder?: string
   mask?: string
 }
+
+/** What the field was declared with, or the wide shape when it isn't known. */
+type DeclaredOf<F extends AnyFields, K extends keyof F> =
+  NonNullable<F[K]['__declared']>
+
+/**
+ * Which extras this field can produce AT ALL. A key nobody declared is absent
+ * from the bindings rather than optional — that's the difference between
+ * `register('username').options` being `undefined` and being a compile error.
+ *
+ * `options` has two sources, the declaration and a rule, and a rule can be
+ * attached from anywhere at any time. So a field whose declaration has no list
+ * still gets the key IF something could derive one — which, unlike the builder,
+ * cannot be settled from the types here. The declaration is what's answerable,
+ * and it is what the check uses.
+ */
+type DeclaredExtras<F extends AnyFields, K extends keyof F> =
+  | ('options' extends keyof DeclaredOf<F, K> ? 'options' : never)
+  | ('placeholder' extends keyof DeclaredOf<F, K> ? 'placeholder' : never)
+  | ('mask' extends keyof DeclaredOf<F, K> ? 'mask' : never)
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {}
 
@@ -52,7 +72,7 @@ export type FieldBindings<F extends AnyFields, K extends keyof F & string> = Pre
      */
     'onUpdate:modelValue': (value: F[K]['value'] | undefined) => void
   }
-  & Partial<FieldExtras<F[K]['value']>>
+  & Pick<FieldExtras<F[K]['value']>, DeclaredExtras<F, K>>
 >
 
 /** Everything the engine derives from a fields object. */

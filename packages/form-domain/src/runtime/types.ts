@@ -2,6 +2,17 @@
 // `#forms` is the package's public entry point
 export { field } from './field'
 export { createFormDomain } from './domain/createFormDomain'
+
+/**
+ * The setup format, being trialled alongside the builder. Not a replacement
+ * yet — the two are exercised on the same domain so they can be compared.
+ */
+export { field as setupField, fields } from './setup/field'
+export { addRule, addRules, addSchema, addSchemas } from './setup/register'
+export { defineFormDomain, useForm } from './setup/define'
+export type { FieldObj, FieldInput, FieldRule } from './setup/field'
+export type { FieldBindings as SetupFieldBindings, FormEngine, ValuesOf } from './setup/types'
+export type { FormDomain, FormDomainInstance as SetupFormDomainInstance } from './setup/define'
 export type {
   ContextOf,
   DomainContext,
