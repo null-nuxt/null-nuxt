@@ -88,7 +88,7 @@ const module: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptions>({
         { name: 'field', from: resolver.resolve('./runtime/field') },
         { name: 'useFormDomain', from: resolver.resolve('./runtime/domain/catalog') },
         { name: 'useFormDomains', from: resolver.resolve('./runtime/domain/catalog') },
-        { name: 'useFormDomainsMeta', from: resolver.resolve('./runtime/domain/catalog') },
+        { name: 'useFormDomainsOutcome', from: resolver.resolve('./runtime/domain/catalog') },
       ])
     }
   },

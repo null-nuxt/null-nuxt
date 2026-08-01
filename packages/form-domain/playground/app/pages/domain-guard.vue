@@ -31,7 +31,7 @@ const useDomain = createFormDomain('domain-guard')
     // @ts-expect-error validar campo que não existe em fields não faz sentido
     sobrenome: string().required(),
   }))
-  .withMeta(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
+  .withOutcome(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
   .build()
 
 /** `storeLabelIn` só aceita outro campo do próprio domínio. */
@@ -69,14 +69,14 @@ createFormDomain('domain-guard-label-proprio')
 
 const form = useDomain()
 
-// o tipo de `meta` vem do withMeta
-const price: number = form.meta.value.price
+// o tipo de `meta` vem do withOutcome
+const price: number = form.outcome.value.price
 
 // o valor do campo mantém o tipo declarado em fields
 const tipo: 'PF' | 'PJ' | '' = form.values.value.tipo
 
 // @ts-expect-error meta não tem essa chave
-const semMeta = form.meta.value.naoExiste
+const semMeta = form.outcome.value.naoExiste
 
 // @ts-expect-error campo fora de fields
 const semCampo = form.data.sobrenome

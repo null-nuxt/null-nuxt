@@ -37,7 +37,7 @@ const build = (id: string, onChangeSpy = vi.fn()) =>
       cpf: string().required('CPF obrigatório'),
       cnpj: string().required('CNPJ obrigatório'),
     })
-    .withMeta(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
+    .withOutcome(ctx => ({ price: ctx.facts.isPF ? 100 : 250 }))
     .build()
 
 describe('facts compartilhado', () => {
@@ -51,7 +51,7 @@ describe('facts compartilhado', () => {
 
     expect(form.facts.value.isPF).toBe(false)
     expect(form.canShow.value.cpf).toBe(false)
-    expect(form.meta.value.price).toBe(250)
+    expect(form.outcome.value.price).toBe(250)
 
     form.data.tipo_pessoa.value = 'PF'
     await nextTick()
@@ -59,7 +59,7 @@ describe('facts compartilhado', () => {
     expect(form.facts.value.isPF).toBe(true)
     expect(form.canShow.value.cpf).toBe(true)
     expect(form.canShow.value.cnpj).toBe(false)
-    expect(form.meta.value.price).toBe(100)
+    expect(form.outcome.value.price).toBe(100)
   })
 })
 
@@ -246,7 +246,7 @@ describe('option escolhida', () => {
             : [{ label: 'Nacional', value: 'primeira' }],
         },
       })
-      .withMeta(ctx => ({
+      .withOutcome(ctx => ({
         // resumo de carrinho quer o texto amigável, não o código
         resumo: `Região: ${ctx.selected.regiao?.label ?? '—'}`,
       }))
@@ -292,7 +292,7 @@ describe('option escolhida', () => {
     form.set({ tipo: 'PF', regiao: 'primeira' })
     await nextTick()
 
-    expect(form.meta.value.resumo).toBe('Região: 1ª Região')
+    expect(form.outcome.value.resumo).toBe('Região: 1ª Região')
   })
 })
 

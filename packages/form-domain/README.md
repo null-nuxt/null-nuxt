@@ -125,7 +125,7 @@ createFormDomain('federal-court')
     person_type: { onChange: (_value, ctx) => ctx.patch({ region: '' }) },
   })
   .withSchema(ctx => ctx.shape({ /* ... */ }))
-  .withMeta(ctx => ({ sku: ctx.facts.isIndividual ? 'A' : 'B' }))
+  .withOutcome(ctx => ({ sku: ctx.facts.isIndividual ? 'A' : 'B' }))
   .build()
 ```
 
@@ -289,7 +289,7 @@ Derived, the text follows along on its own. `meta` also receives
 `ctx.selected`, so the cart line can come straight from the domain:
 
 ```ts
-.withMeta(ctx => ({ summary: `Region: ${ctx.selected.region?.label ?? '—'}` }))
+.withOutcome(ctx => ({ summary: `Region: ${ctx.selected.region?.label ?? '—'}` }))
 ```
 
 `options` deliberately does **not** receive `selected`: an options rule that
@@ -417,11 +417,11 @@ forms/federal-court/
 ├── domain.ts   → createFormDomain().withFields().withFacts()
 ├── rules.ts    → RulesOf<Base>
 ├── schema.ts   → SchemaOf<Base>
-├── meta.ts     → MetaOf<Base, MyMeta>
-└── index.ts    → base.withRules(rules).withSchema(schema).withMeta(meta).build()
+├── meta.ts     → OutcomeOf<Base, MyMeta>
+└── index.ts    → base.withRules(rules).withSchema(schema).withOutcome(meta).build()
 ```
 
-`RulesOf`, `SchemaOf` and `MetaOf` extract the context from the partial
+`RulesOf`, `SchemaOf` and `OutcomeOf` extract the context from the partial
 builder — without them each file would try to reconstruct the types and hit a
 circular import.
 
@@ -432,7 +432,7 @@ Domains under `<srcDir>/forms` are discovered automatically:
 ```ts
 const domain = useFormDomain('federal-court') // typed: that domain's meta and fields
 const all = useFormDomains()                   // instantiates all — use for catalogs
-const catalog = useFormDomainsMeta()           // metadata only
+const catalog = useFormDomainsOutcome()           // metadata only
 ```
 
 `useFormDomain` instantiates **only** the requested domain: the factory is
@@ -475,7 +475,7 @@ form.selected    // the selected option — where the friendly label comes from
 form.shape       // visible validators, with the types you declared
 form.composeSchema(object) // the same, composed by your library, reactive
 form.validate()  // validates visible fields only
-form.meta        // metadata, reactive when declared as a function
+form.outcome        // metadata, reactive when declared as a function
 form.register(k) // ready-made input props
 form.set(patch)  // partial, typed patch
 form.reset()     // back to initial values

@@ -105,14 +105,14 @@ export type SelectedOptions<F extends FieldsDef> = {
 }
 
 /**
- * The `meta` context. It has `selected` because a cart summary needs the
+ * The `outcome` context. It has `selected` because a cart line needs the
  * friendly text, not the code.
  *
  * `options` deliberately does NOT receive this context: if it could read
  * `selected`, an options rule depending on the selected option would recurse.
  * Separate contexts make that cycle impossible by construction.
  */
-export interface MetaContext<F extends FieldsDef, C> extends DomainContext<F, C> {
+export interface OutcomeContext<F extends FieldsDef, C> extends DomainContext<F, C> {
   selected: SelectedOptions<F>
 }
 
@@ -148,9 +148,9 @@ export type DomainSchema<F extends FieldsDef, C> =
   | DomainSchemaShape<F>
   | ((ctx: SchemaContext<F, C>) => DomainSchemaShape<F>)
 
-export type DomainMeta<F extends FieldsDef, C, M> =
+export type DomainOutcome<F extends FieldsDef, C, M> =
   | M
-  | ((ctx: MetaContext<F, C>) => M)
+  | ((ctx: OutcomeContext<F, C>) => M)
 
 /**
  * The extras an input may receive. All optional: the engine only emits the ones
@@ -267,7 +267,7 @@ export interface FormDomainInstance<
   composeSchema: <T>(combine: (shape: ResolvedShape<S, R>) => T) => ComputedRef<T>
   /** Validates only what's visible. Hidden fields aren't required. */
   validate: () => Promise<ValidationResult<FormValues<F>>>
-  meta: ComputedRef<M>
+  outcome: ComputedRef<M>
   set: (patch: Partial<FormValues<F>>) => void
   reset: () => void
   dispose: () => void
@@ -328,8 +328,8 @@ export interface FormDomainBuilder<
     ): FormDomainBuilder<F, C, M, Id, S2, R>
   }
 
-  withMeta: <M2 extends object>(
-    meta: DomainMeta<F, C, M2>,
+  withOutcome: <M2 extends object>(
+    outcome: DomainOutcome<F, C, M2>,
   ) => FormDomainBuilder<F, C, M2, Id, S, R>
 
   /**
@@ -372,6 +372,6 @@ export type SchemaOf<B> = B extends FormDomainBuilder<infer F, infer C, infer _M
   ? (ctx: SchemaContext<F, C>) => DomainSchemaShape<F>
   : never
 
-export type MetaOf<B, M extends object> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
-  ? DomainMeta<F, C, M>
+export type OutcomeOf<B, M extends object> = B extends FormDomainBuilder<infer F, infer C, infer _M, infer _Id, infer _S, infer _R>
+  ? DomainOutcome<F, C, M>
   : never

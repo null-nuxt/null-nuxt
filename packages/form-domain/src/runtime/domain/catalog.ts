@@ -42,10 +42,10 @@ export function useFormDomains(): AnyFormDomain[] {
   return domains.map(use => use()) as AnyFormDomain[]
 }
 
-/** Metadata only, which is what a catalog page usually wants. */
-export function useFormDomainsMeta() {
+/** The outcome of every domain, which is what a catalog page usually wants. */
+export function useFormDomainsOutcome() {
   return useFormDomains().map(domain => ({
     id: (domain as { id: string }).id,
-    meta: (domain as { meta: unknown }).meta,
+    outcome: (domain as { outcome: unknown }).outcome,
   }))
 }

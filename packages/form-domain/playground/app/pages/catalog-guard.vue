@@ -6,8 +6,8 @@
 const domain = useFormDomain('justica-federal')
 
 // meta específica deste domínio
-const sku: string = domain.meta.value.sku
-const price: number = domain.meta.value.price
+const sku: string = domain.outcome.value.sku
+const price: number = domain.outcome.value.price
 
 // fact específico deste domínio
 const isPF: boolean = domain.facts.value.isPF
@@ -16,7 +16,7 @@ const isPF: boolean = domain.facts.value.isPF
 useFormDomain('nao-existe')
 
 // @ts-expect-error meta deste domínio não tem essa chave
-const semMeta = domain.meta.value.naoExiste
+const semMeta = domain.outcome.value.naoExiste
 
 const todos = useFormDomains()
 const quantos: number = todos.length

@@ -7,7 +7,7 @@ import type { FieldsDef, FormData, FormValues } from '../types'
 import type {
   ChangeContext,
   DomainContext,
-  DomainMeta,
+  DomainOutcome,
   DomainRules,
   DomainSchema,
   FieldOption,
@@ -21,7 +21,7 @@ interface Definition {
   derive?: (ctx: unknown) => Record<string, unknown>
   rules?: DomainRules<FieldsDef, unknown>
   schema?: DomainSchema<FieldsDef, unknown>
-  meta?: DomainMeta<FieldsDef, unknown, Record<string, unknown>>
+  outcome?: DomainOutcome<FieldsDef, unknown, Record<string, unknown>>
 }
 
 /**
@@ -148,8 +148,8 @@ function createInstance(definition: Definition) {
     const schemaContext = Object.create(context) as Record<string, unknown>
     schemaContext.shape = (fields: unknown) => fields
 
-    const metaContext = Object.create(context) as Record<string, unknown>
-    Object.defineProperty(metaContext, 'selected', { get: () => selected.value })
+    const outcomeContext = Object.create(context) as Record<string, unknown>
+    Object.defineProperty(outcomeContext, 'selected', { get: () => selected.value })
 
     /**
      * Only the visible fields' validators. A hidden field isn't validated —
@@ -206,10 +206,10 @@ function createInstance(definition: Definition) {
       }
     }
 
-    const meta = computed(() =>
-      typeof definition.meta === 'function'
-        ? (definition.meta as (ctx: unknown) => Record<string, unknown>)(metaContext)
-        : definition.meta ?? {},
+    const outcome = computed(() =>
+      typeof definition.outcome === 'function'
+        ? (definition.outcome as (ctx: unknown) => Record<string, unknown>)(outcomeContext)
+        : definition.outcome ?? {},
     )
 
     for (const key of Object.keys(definition.rules ?? {})) {
@@ -267,7 +267,7 @@ function createInstance(definition: Definition) {
       shape,
       composeSchema,
       validate,
-      meta,
+      outcome,
       set,
       reset,
       dispose: () => scope.stop(),
@@ -337,8 +337,8 @@ export function createFormDomain<const Id extends string>(
       definition.schema = schema
       return builder
     },
-    withMeta(meta: DomainMeta<FieldsDef, unknown, Record<string, unknown>>) {
-      definition.meta = meta
+    withOutcome(outcome: DomainOutcome<FieldsDef, unknown, Record<string, unknown>>) {
+      definition.outcome = outcome
       return builder
     },
     build() {

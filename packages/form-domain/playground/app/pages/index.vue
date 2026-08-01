@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { data, canShow, options, values, meta, facts, shape, reset } = useFormDomain('justica-federal')
+const { data, canShow, options, values, outcome, facts, shape, reset } = useFormDomain('justica-federal')
 
 const camposNoSchema = computed(() => Object.keys(shape.value))
 </script>
@@ -9,7 +9,7 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
     <h1>@null-nuxt/form-domain</h1>
     <p style="color:#52525b; font-size:.9rem">
       Este domínio está separado em <code>fields</code>, <code>rules</code>,
-      <code>schema</code> e <code>meta</code> — quatro arquivos, um contexto
+      <code>schema</code> e <code>outcome</code> — quatro arquivos, um contexto
       compartilhado.
     </p>
 
@@ -59,9 +59,9 @@ const camposNoSchema = computed(() => Object.keys(shape.value))
 
     <div style="display:grid; gap:.4rem; background:#f4f4f5; padding:.8rem; border-radius:.4rem; font-size:.82rem">
       <div><strong>facts</strong>: isPF={{ facts.isPF }} · isPJ={{ facts.isPJ }}</div>
-      <div><strong>meta</strong>: {{ meta.sku }} — R$ {{ meta.price.toFixed(2) }}</div>
+      <div><strong>outcome</strong>: {{ outcome.sku }} — R$ {{ outcome.price.toFixed(2) }}</div>
       <div>
-        <strong>carrinho</strong>: {{ meta.resumo }}
+        <strong>carrinho</strong>: {{ outcome.resumo }}
         <br>
         <small style="opacity:.6">
           o campo guarda <code>{{ values.regiao || '—' }}</code>; o label vem
