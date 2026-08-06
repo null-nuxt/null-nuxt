@@ -1,7 +1,8 @@
 {
   "name": "@null-nuxt/tracking",
   "version": "0.1.0",
-  "description": "Tracking de interações para Nuxt: identidade, atribuição, page-view e diretiva — com wire format e identidade plugáveis.",
+  "description": "Interaction tracking for Nuxt: identity, attribution, page views and a click directive — with a pluggable wire format and identity strategy.",
+  "author": "Miguel Siqueira Reis <miguel.siqueira.reis@gmail.com>",
   "license": "MIT",
   "homepage": "https://github.com/null-nuxt/null-nuxt/tree/main/packages/tracking#readme",
   "keywords": [

@@ -11,7 +11,11 @@ predates that and is kept only so existing pins keep resolving.
 
 ## [Unreleased]
 
-Nothing yet.
+### Both packages — Changed
+
+- `author` added to the manifests, and the descriptions translated. They were
+  the last Portuguese strings on the published surface, and the description is
+  the most visible one a manifest has.
 
 ## `@null-nuxt/form-domain` 0.5.0 — 2026-08-01
 
